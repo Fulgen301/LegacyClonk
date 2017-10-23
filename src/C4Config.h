@@ -144,7 +144,7 @@ public:
 	bool RXMusic;
 	bool FEMusic;
 	bool FESamples;
-	int32_t FMMode;
+	bool Verbose; // show music files names
 	int32_t MusicVolume;
 	int32_t SoundVolume;
 	void CompileFunc(StdCompiler *pComp);

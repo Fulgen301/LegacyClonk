@@ -22,6 +22,8 @@ project("LegacyClonk")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 include(CheckCXXSymbolExists)
 include(CheckIncludeFileCXX)
 include(CMakeDependentOption)
@@ -130,6 +132,13 @@ file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated")
 make_includable(COPYING "${CMAKE_CURRENT_BINARY_DIR}/generated/COPYING.h")
 make_includable(TRADEMARK "${CMAKE_CURRENT_BINARY_DIR}/generated/TRADEMARK.h")
 
+if (NOT ENABLE_SOUND)
+	list(APPEND CLONK_SOURCES src/C4AudioSystemNone.cpp)
+elseif (USE_FMOD)
+	list(APPEND CLONK_SOURCES src/C4AudioSystemFmod.cpp)
+elseif (USE_SDL_MIXER)
+	list(APPEND CLONK_SOURCES src/C4AudioSystemSdl.cpp)
+endif ()
 
 if (WIN32)
 	append_filelist(CLONK_SOURCES EngineWin32.txt)
@@ -169,8 +178,12 @@ else ()
 	list(APPEND LIBSTANDARD_SOURCES src/StdSha1OpenSSL.cpp)
 endif ()
 
-if (USE_SDL_MAINLOOP)
+if (USE_SDL_MAINLOOP OR USE_SDL_MIXER)
 	append_filelist(LIBSTANDARD_SOURCES StdSdl.txt)
+endif ()
+
+if (USE_SDL_MAINLOOP)
+	append_filelist(LIBSTANDARD_SOURCES StdSdlMainloop.txt)
 endif ()
 
 if (USE_X11)
@@ -204,7 +217,7 @@ target_link_libraries(clonk standard)
 
 # Link FMOD
 if (USE_FMOD)
-	find_library(FMOD_LIBRARY fmodvc)
+	find_library(FMOD_LIBRARY fmod_vc fmod64_vc)
 	if (NOT FMOD_LIBRARY)
 		message(FATAL_ERROR "Cannot find FMOD library")
 	endif ()
@@ -266,22 +279,21 @@ if (NOT USE_WIC)
 	target_link_libraries(standard PNG::PNG)
 endif ()
 
-# Link SDL
+# Link SDL2
 if (USE_SDL_MAINLOOP OR USE_SDL_MIXER)
-	find_package(SDL REQUIRED)
-	if (USE_SDL_MAINLOOP)
-		set(HAVE_SDL ON)
+	find_package(SDL2 REQUIRED)
+	if (SDL2_FOUND AND USE_SDL_MAINLOOP)
+		set(USE_SDL_FOR_GAMEPAD ON)
 	endif ()
-	target_include_directories(standard PUBLIC ${SDL_INCLUDE_DIR})
-	target_link_libraries(standard ${SDL_LIBRARY})
+	target_include_directories(standard PUBLIC ${SDL2_INCLUDE_DIRS})
+	target_link_libraries(standard ${SDL2_LIBRARIES})
 endif ()
 
-# Link SDL_mixer
+# Link SDL2_mixer
 if (USE_SDL_MIXER)
-	find_package(SDL_mixer REQUIRED)
-	target_include_directories(clonk PRIVATE ${SDL_MIXER_INCLUDE_DIRS})
-	target_link_libraries(clonk ${SDL_MIXER_LIBRARIES})
-	set(HAVE_LIBSDL_MIXER ON)
+	find_package(SDL2Mixer REQUIRED)
+	target_include_directories(clonk PRIVATE ${SDL2Mixer_INCLUDE_DIRS})
+	target_link_libraries(clonk ${SDL2Mixer_LIBRARIES})
 endif ()
 
 # Link Windows Imaging Component
