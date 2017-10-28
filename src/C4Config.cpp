@@ -181,6 +181,7 @@ void C4ConfigSound::CompileFunc(StdCompiler *pComp)
 	pComp->Value(mkNamingAdapt(Verbose,     "Verbose",     false, false, true));
 	pComp->Value(mkNamingAdapt(MusicVolume, "MusicVolume", 100, false, true));
 	pComp->Value(mkNamingAdapt(SoundVolume, "SoundVolume", 100, false, true));
+	pComp->Value(mkNamingAdapt(MaxChannels, "MaxChannels", 100, false, true));
 }
 
 void C4ConfigNetwork::CompileFunc(StdCompiler *pComp)

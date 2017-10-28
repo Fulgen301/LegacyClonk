@@ -147,6 +147,7 @@ public:
 	bool Verbose; // show music files names
 	int32_t MusicVolume;
 	int32_t SoundVolume;
+	int32_t MaxChannels;
 	void CompileFunc(StdCompiler *pComp);
 };
 
