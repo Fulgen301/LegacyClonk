@@ -29,8 +29,8 @@ install:
   - cmd: copy fmodapi375win\api\inc\* deps\include
   - cmd: copy fmodapi375win\api\lib\* deps\lib
   - sh: sudo apt-get update
-  - sh: test "$PLATFORM" = "x86" && (curl -L https://github.com/legacyclonk/ubuntu-1804-x86-chroot/releases/download/continuous-master/chroot.tar.gz | sudo tar xz) || true
-  - sh: test "$PLATFORM" = "x86" && (curl -L https://raw.githubusercontent.com/legacyclonk/ubuntu-1804-x86-chroot/master/setup_chroot.sh | sudo bash -e -) || true
+  - sh: if test "$PLATFORM" = "x86"; then (curl -L https://github.com/legacyclonk/ubuntu-1804-x86-chroot/releases/download/continuous-master/chroot.tar.gz | sudo tar xz); fi
+  - sh: if test "$PLATFORM" = "x86"; then (curl -L https://raw.githubusercontent.com/legacyclonk/ubuntu-1804-x86-chroot/master/setup_chroot.sh | sudo bash -e -); fi
 
 before_build:
   - cmd: cmake -G "Visual Studio 15 2017" -DCMAKE_BUILD_TYPE=RelWithDebInfo .
@@ -47,9 +47,9 @@ for:
         - image: Ubuntu1804
 
   build_script:
-  - sh: test "$PLATFORM" = "x86" && sudo rsync -rv --exclude=chroot . chroot/legacyclonk || true
-  - sh: test "$PLATFORM" = "x86" && sudo chroot chroot /legacyclonk/appveyor/build.sh || true
-  - sh: test "$PLATFORM" = "x64" && source appveyor/build.sh || true
+  - sh: if test "$PLATFORM" = "x86"; then sudo rsync -rv --exclude=chroot . chroot/legacyclonk; fi
+  - sh: if test "$PLATFORM" = "x86"; then sudo chroot chroot /legacyclonk/appveyor/build.sh; fi
+  - sh: if test "$PLATFORM" = "x64"; then source appveyor/build.sh; fi
 
 after_build:
   - cmd: ls
@@ -62,12 +62,12 @@ after_build:
   - cmd: 7z a LegacyClonk.zip *
   - cmd: appveyor PushArtifact .\LegacyClonk.zip -DeploymentName LegacyClonk
   -
-  - sh: test "$PLATFORM" = "x86" && cp chroot/legacyclonk/build/LegacyClonk-.tar.gz LegacyClonk-x86.tar.gz || true
+  - sh: if test "$PLATFORM" = "x86"; then cp chroot/legacyclonk/build/LegacyClonk-.tar.gz LegacyClonk-x86.tar.gz; fi
   - sh: appveyor PushArtifact LegacyClonk-${PLATFORM}.tar.gz -DeploymentName LegacyClonk
-  - sh: test "$PLATFORM" = "x64" && C4GROUP=./c4group ../tools/make_Graphics.c4g.sh || true
-  - sh: test "$PLATFORM" = "x64" && appveyor PushArtifact Graphics.c4g -DeploymentName LegacyClonk || true
-  - sh: test "$PLATFORM" = "x64" && C4GROUP=./c4group ../tools/make_System.c4g.sh || true
-  - sh: test "$PLATFORM" = "x64" && appveyor PushArtifact System.c4g -DeploymentName LegacyClonk || true
+  - sh: if test "$PLATFORM" = "x64"; then C4GROUP=./c4group ../tools/make_Graphics.c4g.sh; fi
+  - sh: if test "$PLATFORM" = "x64"; then appveyor PushArtifact Graphics.c4g -DeploymentName LegacyClonk; fi
+  - sh: if test "$PLATFORM" = "x64"; then C4GROUP=./c4group ../tools/make_System.c4g.sh; fi
+  - sh: if test "$PLATFORM" = "x64"; then appveyor PushArtifact System.c4g -DeploymentName LegacyClonk; fi
 
 test: off
 deploy:
