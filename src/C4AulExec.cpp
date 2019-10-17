@@ -307,7 +307,7 @@ private:
 			CheckOpPar<false>(pCurVal, C4ScriptOpMap[iOpID].Type1, C4ScriptOpMap[iOpID].Identifier);
 	}
 
-	C4AulBCC *Call(C4AulFunc *pFunc, C4Value *pReturn, C4Value *pPars, C4Object *pObj = nullptr, C4Def *pDef = nullptr, bool globalContext = false);
+	C4AulBCC *Call(C4AulFunc *pFunc, C4Value *pReturn, C4Value *pPars, C4Object *pObj = nullptr, bool globalContext = false);
 };
 
 C4AulExec AulExec;
@@ -334,7 +334,6 @@ C4Value C4AulExec::Exec(C4AulScriptFunc *pSFunc, C4Object *pObj, C4Value *pnPars
 	// Push a new context
 	C4AulScriptContext ctx;
 	ctx.Obj = pObj;
-	ctx.Def = pDef;
 	ctx.Return = nullptr;
 	ctx.Pars = pPars;
 	ctx.Vars = pVars;
@@ -403,7 +402,7 @@ C4Value C4AulExec::Exec(C4AulBCC *pCPos, bool fPassErrors)
 			case AB_LOCALN_R: case AB_LOCALN_V:
 				if (!pCurCtx->Obj)
 					throw new C4AulExecError(pCurCtx->Obj, "can't access local variables in a definition call!");
-				if (pCurCtx->Func->Owner->Def != pCurCtx->Def)
+				if (pCurCtx->Func->Owner->Def != pCurCtx->Obj->Def)
 					throw new C4AulExecError(pCurCtx->Obj, "can't access local variables after ChangeDef!");
 				if (pCPos->bccType == AB_LOCALN_R)
 					PushValueRef(*pCurCtx->Obj->LocalNamed.GetItem(pCPos->bccX));
@@ -1056,7 +1055,7 @@ C4Value C4AulExec::Exec(C4AulBCC *pCPos, bool fPassErrors)
 				// Save current position
 				pCurCtx->CPos = pCPos;
 				// Do the call
-				C4AulBCC *pJump = Call(pFunc, pPars, pPars, nullptr);
+				C4AulBCC *pJump = Call(pFunc, pPars, pPars);
 				if (pJump)
 				{
 					pCPos = pJump;
@@ -1246,7 +1245,7 @@ C4Value C4AulExec::Exec(C4AulBCC *pCPos, bool fPassErrors)
 				pCurCtx->CPos = pCPos;
 
 				// Call function
-				C4AulBCC *pNewCPos = Call(pFunc, pTargetVal, pPars, pDestObj, pDestDef, isGlobal);
+				C4AulBCC *pNewCPos = Call(pFunc, pTargetVal, pPars, pDestObj, isGlobal);
 				if (pNewCPos)
 				{
 					// Jump
@@ -1294,19 +1293,17 @@ C4Value C4AulExec::Exec(C4AulBCC *pCPos, bool fPassErrors)
 	return C4VNull;
 }
 
-C4AulBCC *C4AulExec::Call(C4AulFunc *pFunc, C4Value *pReturn, C4Value *pPars, C4Object *pObj, C4Def *pDef, bool globalContext)
+C4AulBCC *C4AulExec::Call(C4AulFunc *pFunc, C4Value *pReturn, C4Value *pPars, C4Object *pObj, bool globalContext)
 {
 	// No object given? Use current context
 	if (globalContext)
 	{
 		pObj = nullptr;
-		pDef = nullptr;
 	}
-	else if (!pObj && !pDef)
+	else if (!pObj)
 	{
 		assert(pCurCtx >= Contexts);
 		pObj = pCurCtx->Obj;
-		pDef = pCurCtx->Def;
 	}
 
 	// Script function?
@@ -1350,12 +1347,11 @@ C4AulBCC *C4AulExec::Call(C4AulFunc *pFunc, C4Value *pReturn, C4Value *pPars, C4
 		PushNullVals(pSFunc->VarNamed.iSize);
 
 		// Check context
-		assert(!pSFunc->Owner->Def || pDef == pSFunc->Owner->Def);
+		//assert(!pSFunc->Owner->Def || (pObj && pObj->Def == pSFunc->Owner->Def));
 
 		// Push a new context
 		C4AulScriptContext ctx;
 		ctx.Obj = pObj;
-		ctx.Def = pDef;
 		ctx.Caller = pCurCtx;
 		ctx.Return = pReturn;
 		ctx.Pars = pPars;
@@ -1373,7 +1369,6 @@ C4AulBCC *C4AulExec::Call(C4AulFunc *pFunc, C4Value *pReturn, C4Value *pPars, C4
 		// Create new context
 		C4AulContext CallCtx;
 		CallCtx.Obj = pObj;
-		CallCtx.Def = pDef;
 		CallCtx.Caller = pCurCtx;
 
 #ifdef DEBUGREC_SCRIPT
@@ -1514,7 +1509,6 @@ C4Value C4AulFunc::Exec(C4Object *pObj, C4AulParSet *pPars, bool fPassErrors)
 	// construct a dummy caller context
 	C4AulContext ctx;
 	ctx.Obj = pObj;
-	ctx.Def = pObj ? pObj->Def : nullptr;
 	ctx.Caller = nullptr;
 	// execute
 	return Exec(&ctx, pPars ? pPars->Par : C4AulParSet().Par, fPassErrors);

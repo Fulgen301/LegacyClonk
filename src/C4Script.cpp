@@ -1398,7 +1398,7 @@ static long FnGetActTime(C4AulContext *cthr, C4Object *pObj)
 
 static C4ID FnGetID(C4AulContext *cthr, C4Object *pObj)
 {
-	C4Def *pDef = pObj ? pObj->Def : cthr->Def;
+	C4Def *pDef = pObj ? pObj->Def : cthr->Obj ? cthr->Obj->Def : nullptr;
 	if (!pDef) return 0;
 	// return id of object
 	return pDef->id;
@@ -4303,7 +4303,7 @@ static C4Value FnGetDefCoreVal(C4AulContext *cthr, C4Value *strEntry_C4V, C4Valu
 	C4ID idDef = idDef_C4V->getC4ID();
 	long iEntryNr = iEntryNr_C4V->getInt();
 
-	if (!idDef) if (cthr->Def) idDef = cthr->Def->id;
+	if (!idDef) if (cthr->Obj) idDef = cthr->Obj->Def->id;
 	if (!idDef) return C4Value();
 
 	C4Def *pDef = C4Id2Def(idDef);
@@ -4358,7 +4358,7 @@ static C4Value FnGetActMapVal(C4AulContext *cthr, C4Value *strEntry_C4V, C4Value
 	C4ID idDef = idDef_C4V->getC4ID();
 	long iEntryNr = iEntryNr_C4V->getInt();
 
-	if (!idDef) if (cthr->Def) idDef = cthr->Def->id;
+	if (!idDef) if (cthr->Obj) idDef = cthr->Obj->Def->id;
 	if (!idDef) return C4Value();
 
 	C4Def *pDef = C4Id2Def(idDef);
@@ -4659,8 +4659,6 @@ static C4Value FnEval(C4AulContext *cthr, C4Value *strScript_C4V)
 		Strict = cthr->Caller->Func->pOrgScript->Strict;
 	if (cthr->Obj)
 		return cthr->Obj->Def->Script.DirectExec(cthr->Obj, FnStringPar(strScript_C4V->getStr()), "eval", true, Strict);
-	else if (cthr->Def)
-		return cthr->Def->Script.DirectExec(0, FnStringPar(strScript_C4V->getStr()), "eval", true, Strict);
 	else
 		return Game.Script.DirectExec(0, FnStringPar(strScript_C4V->getStr()), "eval", true, Strict);
 }

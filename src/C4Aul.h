@@ -239,7 +239,6 @@ struct C4AulBCC
 struct C4AulContext
 {
 	C4Object *Obj;
-	C4Def *Def;
 	struct C4AulScriptContext *Caller;
 };
 
