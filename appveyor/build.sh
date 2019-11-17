@@ -7,4 +7,10 @@ mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX="/usr" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DWITH_DEVELOPER_MODE=On ..
 make -j$(nproc)
-test -e clonk && tar -cvzf LegacyClonk.tar.gz clonk c4group
+
+test -e clonk
+if [ $? -eq 0 ]; then
+  C4GROUP=$PWD/build/c4group tools/make_Graphics.c4g.sh
+  C4GROUP=$PWD/build/c4group tools/make_System.c4g.sh
+  tar -cvzf LegacyClonk.tar.gz clonk c4group Graphics.c4g System.c4g
+fi
