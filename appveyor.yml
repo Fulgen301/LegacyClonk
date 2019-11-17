@@ -61,9 +61,8 @@ for:
         rsync -rv --exclude=ramdisk .. legacyclonk
         cd legacyclonk
         appveyor/build.sh
-        C4GROUP=$PWD/build/c4group tools/make_Graphics.c4g.sh
-        C4GROUP=$PWD/build/c4group tools/make_System.c4g.sh
-        mv build/LegacyClonk.tar.gz .
+        mkdir appdir
+        mv build/{clonk,c4group,System.c4g,Graphics.c4g} appdir
       fi
 
 after_build:
@@ -73,12 +72,32 @@ after_build:
   - cmd: copy glew32.dll appdir
   - cmd: copy RelWithDebInfo\*.exe appdir
   - cmd: copy RelWithDebInfo\*.pdb appdir
-  - cmd: cd appdir
+  - ps: |
+      $ErrorActionPreference = "Stop"
+      cd appdir
+      if ($isWindows)
+      {
+        Copy-Item ..\planet\System.c4g -Destination System.c4g -Recurse
+        Copy-Item ..\planet\Graphics.c4g -Destination Graphics.c4g -Recurse
+        .\c4group.exe System.c4g -p
+        .\c4group.exe Graphics.c4g -p
+      }
+      
+      $release = Invoke-RestMethod -URI https://api.github.com/repos/legacyclonk/content/releases/tags/continuous-${APPVEYOR_REPO_BRANCH}
+      if ($release.id)
+      {
+        $assets = Invoke-RestMethod -URI https://api.github.com/repos/legacyclonk/content/releases/${release_id}/assets
+        foreach ($asset in $assets)
+        {
+          Invoke-WebRequest -URI "https://api.github.com/repos/legacyclonk/content/releases/assets/${asset.id}" -OutFile $asset.name
+        }
+      }
   - cmd: 7z a LegacyClonk.zip *
   - cmd: appveyor PushArtifact .\LegacyClonk.zip -DeploymentName LegacyClonk
   -
-  - sh: appveyor PushArtifact LegacyClonk.tar.gz -DeploymentName LegacyClonk -FileName "LegacyClonk-${PLATFORM}.tar.gz"
   - sh: |
+      tar -cvzf LegacyClonk.tar.gz *
+      appveyor PushArtifact LegacyClonk.tar.gz -DeploymentName LegacyClonk -FileName "LegacyClonk-${PLATFORM}.tar.gz"
       if [ "$PLATFORM" = "x64" ]; then
         appveyor PushArtifact Graphics.c4g -DeploymentName LegacyClonk;
         appveyor PushArtifact System.c4g -DeploymentName LegacyClonk;
