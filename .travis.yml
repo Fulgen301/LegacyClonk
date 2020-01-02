@@ -26,13 +26,11 @@ script:
   - git tag ${TRAVIS_TAG} || true
 
 before_deploy:
-  - git clone https://github.com/auriamg/macdylibbundler/
+  - git clone https://github.com/SCG82/macdylibbundler
   - cd macdylibbundler
-  - git fetch origin pull/48/head:fix-map
-  - git checkout fix-map
   - make
   - cd ..
-  - macdylibbundler/dylibbundler -od -b -x clonk.app/Contents/MacOS/clonk -d clonk.app/Contents/libs/
+  - macdylibbundler/dylibbundler -q -cd -a clonk.app
   - ls
   - tar -cvzf LegacyClonk-mac.tar.gz c4group clonk.app
 
