@@ -184,6 +184,10 @@ public:
 	// next mission to be played after this one
 	StdStrBuf NextMission, NextMissionText, NextMissionDesc;
 
+	// shader
+	std::unordered_map<std::string, std::unique_ptr<CStdShaderProgram>> LoadedShader;
+	std::unordered_map<std::string, std::unique_ptr<CStdShaderProgram>> ScriptShader;
+
 public:
 	// Init and execution
 	void Default();
@@ -310,6 +314,7 @@ protected:
 	bool InitControl();
 	bool InitScriptEngine();
 	bool LinkScriptEngine();
+	void LinkShaders();
 	bool InitPlayers();
 	bool OpenScenario();
 	bool InitDefs();
