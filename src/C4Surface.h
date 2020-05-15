@@ -20,8 +20,6 @@
 
 #include <StdSurface2.h>
 
-class C4Group;
-
 class C4Surface : public CSurface
 {
 private:

@@ -78,6 +78,17 @@ private:
 		C4KeySetCtrl(int32_t iKeySet, int32_t iCtrl) : iKeySet(iKeySet), iCtrl(iCtrl) {}
 	};
 
+	class PreloadThread final : public StdThread
+	{
+	public:
+		PreloadThread() : StdThread{} {}
+
+	protected:
+		void Execute() override final;
+	};
+
+	friend class PreloadThread;
+
 public:
 	C4Game();
 	~C4Game();
@@ -183,6 +194,10 @@ public:
 	bool DebugMode;
 	// next mission to be played after this one
 	StdStrBuf NextMission, NextMissionText, NextMissionDesc;
+	PreloadThread PreloadThread;
+
+private:
+	bool firstPartPreloaded;
 
 public:
 	// Init and execution
@@ -300,9 +315,12 @@ protected:
 
 public:
 	bool SaveGameTitle(C4Group &hGroup);
+	void Preload();
+	std::optional<bool> Preload(const std::function<bool()> &function);
 
 protected:
 	bool InitGame(C4Group &hGroup, C4ScenarioSection *section, bool fLoadSky);
+	bool InitGameFirstPart();
 	bool InitGameFinal();
 	bool InitNetworkFromAddress(const char *szAddress);
 	bool InitNetworkFromReference(const C4Network2Reference &Reference);

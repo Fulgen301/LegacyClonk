@@ -371,6 +371,12 @@ public:
 #endif
 	}
 
+	bool AssertMainThread()
+	{
+		assert(IsMainThread());
+		return IsMainThread();
+	}
+
 #ifdef _WIN32
 	HINSTANCE hInstance;
 	HANDLE hMainThread; // handle to main thread that initialized the app
@@ -384,15 +390,13 @@ public:
 	bool IsAltDown() { return GetKeyState(VK_MENU) < 0; }
 	HWND GetWindowHandle() { return pWindow ? pWindow->hWindow : nullptr; }
 
-	bool AssertMainThread()
+	bool IsMainThread()
 	{
-#ifdef _DEBUG
 		if (hMainThread && hMainThread != ::GetCurrentThread())
 		{
-			assert(false);
 			return false;
 		}
-#endif
+
 		return true;
 	}
 
@@ -421,9 +425,8 @@ protected:
 	bool IsAltDown() { return KeyMask & (1 << 3); }
 	bool SignalNetworkEvent();
 
-	bool AssertMainThread()
+	bool IsMainThread()
 	{
-		assert(MainThread == pthread_self());
 		return MainThread == pthread_self();
 	}
 

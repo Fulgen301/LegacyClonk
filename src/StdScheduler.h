@@ -159,6 +159,7 @@ public:
 	StdThread();
 	virtual ~StdThread() { Stop(); }
 
+	void Start();
 	void SignalStop(); // mark thread to stop but don't wait
 	void Stop();
 

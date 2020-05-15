@@ -575,6 +575,10 @@ C4GUI::Edit::InputResult MainDlg::OnChatInput(C4GUI::Edit *edt, bool fPasting, b
 				else
 					LobbyError(LoadResStr("IDS_MSG_CMD_ABORT_NOCOUNTDOWN"));
 			}
+			else if (SEqualNoCase(Command, "/preload"))
+			{
+				Game.Preload();
+			}
 			else if (SEqualNoCase(Command, "/help"))
 			{
 				Log(LoadResStr("IDS_TEXT_COMMANDSAVAILABLEDURINGLO"));
@@ -869,6 +873,14 @@ void MainDlg::OnBtnChat(C4GUI::Control *btn)
 	C4ChatDlg::ShowChat();
 }
 
+void MainDlg::OnShown()
+{
+	if (Config.General.Preloading)
+	{
+		Game.Preload();
+	}
+}
+
 bool MainDlg::KeyHistoryUpDown(bool fUp)
 {
 	// chat input only
@@ -909,6 +921,43 @@ int32_t MainDlg::ValidatedCountdownTime(int32_t iTimeout)
 void MainDlg::ClearLog()
 {
 	pChatBox->ClearText(true);
+}
+
+void MainDlg::QueueLog(std::string_view message)
+{
+	CStdLock l{&logQueue.lock};
+	logQueue.queue.push(std::string{message});
+}
+
+void MainDlg::QueueGraphics(const std::function<bool()> &function, CStdCSec &lock, bool &result, bool &wait)
+{
+	CStdLock l{&graphicsQueue.lock};
+	graphicsQueue.queue.push(GraphicsQueueElement{function, lock, result, wait});
+}
+
+void MainDlg::Execute()
+{
+	logQueue.lock.Enter();
+	while (logQueue.queue.size() > 0)
+	{
+		Log(logQueue.queue.front().c_str());
+		logQueue.queue.pop();
+	}
+	logQueue.lock.Leave();
+
+	graphicsQueue.lock.Enter();
+	while (graphicsQueue.queue.size() > 0)
+	{
+		GraphicsQueueElement &element = graphicsQueue.queue.front();
+		element.lock.Enter();
+		element.wait = false;
+
+		element.result = element.function();
+		element.lock.Leave();
+		graphicsQueue.queue.pop();
+	}
+
+	graphicsQueue.lock.Leave();
 }
 
 void LobbyError(const char *szErrorMsg)

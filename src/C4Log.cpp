@@ -137,29 +137,38 @@ int iDisableLog = 0;
 
 bool Log(const char *szMessage)
 {
-	if (!Application.AssertMainThread()) return false;
 	if (iDisableLog) return true;
 	// security
 	if (!szMessage) return false;
-	// Pass on to console
-	Console.Out(szMessage);
-	// pass on to lobby
-	C4GameLobby::MainDlg *pLobby = Game.Network.GetLobby();
-	if (pLobby && Game.pGUI) pLobby->OnLog(szMessage);
 
-	// Add message to log buffer
-	bool fNotifyMsgBoard = false;
-	if (Game.GraphicsSystem.MessageBoard.Active)
+
+
+	if (!Application.IsMainThread() && Game.Network.GetLobby())
 	{
-		Game.GraphicsSystem.MessageBoard.AddLog(szMessage);
-		fNotifyMsgBoard = true;
+		Game.Network.GetLobby()->QueueLog(szMessage);
 	}
+	else
+	{
+		// Pass on to console
+		Console.Out(szMessage);
+		// pass on to lobby
+		C4GameLobby::MainDlg *pLobby = Game.Network.GetLobby();
+		if (pLobby && Game.pGUI) pLobby->OnLog(szMessage);
 
-	// log
-	LogSilent(szMessage, true);
+		// Add message to log buffer
+		bool fNotifyMsgBoard = false;
+		if (Game.GraphicsSystem.MessageBoard.Active)
+		{
+			Game.GraphicsSystem.MessageBoard.AddLog(szMessage);
+			fNotifyMsgBoard = true;
+		}
 
-	// Notify message board
-	if (fNotifyMsgBoard) Game.GraphicsSystem.MessageBoard.LogNotify();
+		// log
+		LogSilent(szMessage, true);
+
+		// Notify message board
+		if (fNotifyMsgBoard) Game.GraphicsSystem.MessageBoard.LogNotify();
+	}
 
 	return true;
 }
