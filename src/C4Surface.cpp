@@ -19,6 +19,8 @@
 #include <C4Include.h>
 #include <C4Surface.h>
 #include <C4GroupSet.h>
+#include "C4Game.h"
+#include "C4GameLobby.h"
 
 #include <C4Group.h>
 #include <C4Log.h>
@@ -104,6 +106,11 @@ bool C4Surface::Load(C4Group &hGroup, const char *szFilename, bool fOwnPal, bool
 
 bool C4Surface::ReadPNG(CStdStream &hGroup)
 {
+	if (auto result = Game.Preload(std::bind(&C4Surface::ReadPNG, this, std::ref(hGroup))); result)
+	{
+		return *result;
+	}
+
 	// create mem block
 	int iSize = hGroup.AccessedEntrySize();
 	std::unique_ptr<uint8_t[]> pData(new uint8_t[iSize]);
@@ -218,12 +225,16 @@ bool C4Surface::Copy(C4Surface &fromSfc)
 
 bool C4Surface::ReadJPEG(CStdStream &hGroup)
 {
+	if (auto result = Game.Preload(std::bind(&C4Surface::ReadJPEG, this, std::ref(hGroup))); result)
+	{
+		return *result;
+	}
+
 	// create mem block
 	size_t size = hGroup.AccessedEntrySize();
 	unsigned char *pData = new unsigned char[size];
 	// load file into mem
 	hGroup.Read(pData, size);
-
 	bool locked = false;
 	try
 	{

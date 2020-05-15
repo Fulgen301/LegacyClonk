@@ -57,6 +57,12 @@
 
 constexpr unsigned int defaultIngameGameTickDelay = 28;
 
+void C4Game::PreloadThread::Execute()
+{
+	Game.InitGameFirstPart();
+	Stop();
+}
+
 C4Game::C4Game()
 	: Input(Control.Input), KeyboardInput(C4KeyboardInput_Init()), StartupLogPos(0), QuitLogPos(0), fQuitWithError(false), fPreinited(false),
 	Teams(Parameters.Teams),
@@ -389,10 +395,13 @@ bool C4Game::Init()
 		SetInitProgress(6);
 		if (!Network.RetrieveScenario(szScenario)) return false;
 
-		// open new scenario
-		SCopy(szScenario, ScenarioFilename, _MAX_PATH);
-		if (!OpenScenario()) return false;
-		TempScenarioFile = true;
+		if (!FirstPartPreloaded)
+		{
+			// open new scenario
+			SCopy(szScenario, ScenarioFilename, _MAX_PATH);
+			if (!OpenScenario()) return false;
+			TempScenarioFile = true;
+		}
 
 		// get everything else
 		if (!Parameters.GameRes.RetrieveFiles()) return false;
@@ -1693,6 +1702,7 @@ void C4Game::Default()
 	ObjectEnumerationIndex = 0;
 	FullSpeed = false;
 	FrameSkip = 1; DoSkipFrame = false;
+	FirstPartPreloaded = false;
 	Defs.Default();
 	Material.Default();
 	Objects.Default();
@@ -1904,6 +1914,42 @@ bool C4Game::Decompile(StdStrBuf &rBuf, bool fSaveSection, bool fSaveExact)
 	// Decompile (without players for scenario sections)
 	rBuf.Take(DecompileToBuf<StdCompilerINIWrite>(mkParAdapt(*this, CompileSettings(fSaveSection, !fSaveSection && fSaveExact, fSaveExact))));
 	return true;
+}
+
+void C4Game::Preload()
+{
+	if (!PreloadThread.IsStarted())
+	{
+		PreloadThread.Start();
+	}
+}
+
+std::optional<bool> C4Game::Preload(const std::function<bool()> &function)
+{
+	if (!Application.IsMainThread() && Network.GetLobby())
+	{
+		CStdCSec lock;
+		bool result;
+		bool wait = true;
+
+		Network.GetLobby()->QueueGraphics(function, lock, result, wait);
+
+		while (wait)
+		{
+			lock.Enter();
+			lock.Leave();
+		}
+
+		lock.Enter();
+		lock.Leave();
+
+		return result;
+	}
+
+	else
+	{
+		return std::nullopt;
+	}
 }
 
 bool C4Game::CompileRuntimeData(C4ComponentHost &rGameData)
@@ -2254,19 +2300,7 @@ bool C4Game::InitGame(C4Group &hGroup, C4ScenarioSection *section, bool fLoadSky
 		if (Config.Developer.AutoFileReload && !Application.isFullScreen && !pFileMonitor)
 			pFileMonitor = new C4FileMonitor(FileMonitorCallback);
 
-		// system scripts
-		if (!InitScriptEngine())
-		{
-			LogFatal(LoadResStr("IDS_PRC_FAIL")); return false;
-		}
-		SetInitProgress(8);
-
-		// Scenario components
-		if (!LoadScenarioComponents())
-		{
-			LogFatal(LoadResStr("IDS_PRC_FAIL")); return false;
-		}
-		SetInitProgress(9);
+		InitGameFirstPart();
 
 		// join local players for regular games
 		// should be done before record/replay is initialized, so the players are stored in PlayerInfos.txt
@@ -2294,23 +2328,8 @@ bool C4Game::InitGame(C4Group &hGroup, C4ScenarioSection *section, bool fLoadSky
 		{
 			LogFatal(LoadResStr("IDS_PRC_FAIL")); return false;
 		}
+
 		SetInitProgress(10);
-
-		// Definitions
-		if (!InitDefs()) return false;
-		SetInitProgress(40);
-
-		// Scenario scripts (and local system.c4g)
-		// After defs to get overloading priority
-		if (!LoadScenarioScripts())
-		{
-			LogFatal(LoadResStr("IDS_PRC_FAIL")); return false;
-		}
-		SetInitProgress(56);
-
-		// Link scripts
-		if (!LinkScriptEngine()) return false;
-		SetInitProgress(57);
 
 		// Materials
 		if (!InitMaterialTexture())
@@ -2465,6 +2484,69 @@ bool C4Game::InitGame(C4Group &hGroup, C4ScenarioSection *section, bool fLoadSky
 		SetMusicLevel(iMusicLevel);
 		SetInitProgress(97);
 	}
+	return true;
+}
+
+bool C4Game::InitGameFirstPart()
+{
+	static CStdCSecEx mutex;
+	CStdLock lock{&mutex};
+
+	if (FirstPartPreloaded)
+	{
+		return true;
+	}
+
+	if (!Network.isHost())
+	{
+		if (!Network.RetrieveScenario(ScenarioFilename)) return false;
+		if (!OpenScenario()) return false;
+		TempScenarioFile = true;
+	}
+
+	// system scripts
+	if (!InitScriptEngine())
+	{
+		LogFatal(LoadResStr("IDS_PRC_FAIL"));
+		return false;
+	}
+
+	SetInitProgress(8);
+
+	// Scenario components;
+	if (!LoadScenarioComponents())
+	{
+		LogFatal(LoadResStr("IDS_PRC_FAIL"));
+		return false;
+	}
+
+	// Definitions
+	if (!InitDefs())
+	{
+		return false;
+	}
+
+	SetInitProgress(40);
+
+	// Scenario scripts (and local System.c4g)
+	// After defs to get overloading priority
+	if (!LoadScenarioScripts())
+	{
+		LogFatal(LoadResStr("IDS_PRC_FAIL"));
+		return false;
+	}
+
+	SetInitProgress(56);
+
+	// Link scripts
+	if (!LinkScriptEngine())
+	{
+		return false;
+	}
+
+	SetInitProgress(57);
+	FirstPartPreloaded = true;
+
 	return true;
 }
 

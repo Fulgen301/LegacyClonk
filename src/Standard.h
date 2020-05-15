@@ -99,7 +99,7 @@ inline int stricmp(const char *s1, const char *s2)
 
 // These functions have to be provided by the application.
 bool Log(const char *szMessage);
-bool LogSilent(const char *szMessage);
+bool LogSilent(const char *szMessage, bool console = false);
 bool LogF(const char *strMessage, ...) GNUC_FORMAT_ATTRIBUTE;
 bool LogSilentF(const char *strMessage, ...) GNUC_FORMAT_ATTRIBUTE;
 

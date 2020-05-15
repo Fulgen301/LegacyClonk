@@ -25,6 +25,8 @@
 #include "C4Client.h"
 #include "C4PlayerInfo.h"
 
+#include <queue>
+
 class C4PlayerInfo;
 class C4PlayerInfoListBox;
 class C4ClientPlayerInfos;
@@ -34,6 +36,27 @@ class C4GameOptionButtons;
 
 namespace C4GameLobby
 {
+
+template<typename T> struct Queue
+{
+	CStdCSec lock;
+	std::queue<T> queue;
+};
+
+struct LogQueueElement
+{
+	std::string message;
+	bool silent;
+	bool console;
+};
+
+struct GraphicsQueueElement
+{
+	const std::function<bool()> &function;
+	CStdCSec &lock;
+	bool &result;
+	bool &wait;
+};
 
 class MainDlg;
 
@@ -106,6 +129,9 @@ private:
 	C4GUI::CallbackButton<MainDlg, C4GUI::IconButton> *btnPlayers, *btnResources, *btnTeams, *btnOptions, *btnScenario, *btnChat; // right list sheet selection
 	C4GUI::CheckBox *checkReady;
 
+	Queue<LogQueueElement> logQueue;
+	Queue<GraphicsQueueElement> graphicsQueue;
+
 protected:
 	void OnReadyCheck(C4GUI::Element *pCheckBox); // callback: checkbox ticked
 	void OnRunBtn(C4GUI::Control *btn); // callback: run button pressed
@@ -128,6 +154,7 @@ protected:
 	void OnTabScenario(C4GUI::Control *btn);
 	void UpdateRightTab(); // update label and tooltips for sheet change
 	void OnBtnChat(C4GUI::Control *btn);
+	void OnShown() override;
 
 	virtual class C4GUI::Control *GetDefaultControl() { return pEdt; } // def focus chat input
 
@@ -161,6 +188,9 @@ public:
 	void UpdateFairCrew();
 	void UpdatePassword();
 	void ClearLog();
+	void QueueLog(std::string_view message, bool silent = false, bool console = false);
+	void QueueGraphics(const std::function<bool()> &function, CStdCSec &lock, bool &result, bool &wait);
+	void Execute();
 
 	friend class C4Sec1TimerCallback<MainDlg>;
 	friend class ::C4Network2ResDlg;

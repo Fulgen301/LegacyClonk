@@ -368,6 +368,19 @@ unsigned int StdSchedulerThread::ThreadFunc()
 
 StdThread::StdThread() : fStarted(false), fStopSignaled(false) {}
 
+void StdThread::Start()
+{
+	// already running? stop
+	if (fStarted) Stop();
+	// begin thread
+#ifdef HAVE_WINTHREAD
+	iThread = _beginthread(_ThreadFunc, 0, this);
+	fStarted = iThread != -1;
+#elif HAVE_PTHREAD
+	fStarted = !pthread_create(&Thread, nullptr, _ThreadFunc, this);
+#endif
+}
+
 void StdThread::SignalStop()
 {
 	// Not running?

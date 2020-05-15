@@ -81,21 +81,54 @@ bool C4DefGraphics::LoadBitmap(C4Group &hGroup, const char *szFilename, const ch
 			if (!BitmapClr->ReadPNG(hGroup))
 				return false;
 			// set as Clr-surface, also checking size
-			if (!BitmapClr->SetAsClrByOwnerOf(Bitmap))
+
+			auto setAsClrByOwner = [&hGroup, &szFilenamePNG, &szFilename, &szOverlayPNG, this]() -> bool
 			{
-				const char *szFn = szFilenamePNG ? szFilenamePNG : szFilename;
-				if (!szFn) szFn = "???";
-				DebugLogF("    Gfx loading error in %s: %s (%d x %d) doesn't match overlay %s (%d x %d) - invalid file or size mismatch",
-					hGroup.GetFullName().getData(), szFn, Bitmap ? Bitmap->Wdt : -1, Bitmap ? Bitmap->Hgt : -1,
-					szOverlayPNG, BitmapClr->Wdt, BitmapClr->Hgt);
-				delete BitmapClr; BitmapClr = nullptr;
-				return false;
+				if (!BitmapClr->SetAsClrByOwnerOf(Bitmap))
+				{
+					const char *szFn = szFilenamePNG ? szFilenamePNG : szFilename;
+					if (!szFn) szFn = "???";
+					DebugLogF("    Gfx loading error in %s: %s (%d x %d) doesn't match overlay %s (%d x %d) - invalid file or size mismatch",
+						hGroup.GetFullName().getData(), szFn, Bitmap ? Bitmap->Wdt : -1, Bitmap ? Bitmap->Hgt : -1,
+						szOverlayPNG, BitmapClr->Wdt, BitmapClr->Hgt);
+					delete BitmapClr; BitmapClr = nullptr;
+					return false;
+				}
+
+				return true;
+			};
+
+			if (auto result = Game.Preload(setAsClrByOwner); result)
+			{
+				return *result;
+			}
+
+			else
+			{
+				return setAsClrByOwner();
 			}
 		}
 		else
+		{
 			// otherwise, create by all blue shades
-			if (!BitmapClr->CreateColorByOwner(Bitmap)) return false;
-		fColorBitmapAutoCreated = true;
+			auto createColorByOwner = [this]() -> bool
+			{
+				if (!BitmapClr->CreateColorByOwner(Bitmap)) return false;
+				fColorBitmapAutoCreated = true;
+				return true;
+			};
+
+			if (auto result = Game.Preload(createColorByOwner); result)
+			{
+				return *result;
+			}
+
+			else
+			{
+				return createColorByOwner();
+			}
+		}
+
 	}
 	// success
 	return true;

@@ -433,10 +433,14 @@ bool C4Network2::DoLobby()
 		if (Game.iLobbyTimeout) StartLobbyCountdown(Game.iLobbyTimeout);
 		// do console lobby
 		while (isLobbyActive())
+		{
 			if (Application.HandleMessage() == HR_Failure)
 			{
 				Clear(); return false;
 			}
+
+			pLobby->Execute();
+		}
 	}
 	else
 	{
@@ -451,10 +455,14 @@ bool C4Network2::DoLobby()
 
 		// while state lobby: keep looping
 		while (isLobbyActive() && Game.pGUI && pLobby && pLobby->IsShown())
+		{
 			if (Application.HandleMessage() == HR_Failure)
 			{
 				Clear(); return false;
 			}
+
+			pLobby->Execute();
+		}
 
 		// check whether lobby was aborted; first checking Game.pGUI
 		// (because an external call to Game.Clear() would invalidate pLobby)
