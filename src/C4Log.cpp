@@ -143,8 +143,6 @@ bool Log(const char *szMessage)
 	// security
 	if (!szMessage) return false;
 
-
-
 	if (!Application.IsMainThread() && Game.Network.GetLobby())
 	{
 		Game.Network.GetLobby()->QueueLog(szMessage);
