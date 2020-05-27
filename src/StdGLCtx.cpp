@@ -34,6 +34,7 @@
 
 bool CStdGLCtx::InitGLEW()
 {
+	glewExperimental = true;
 	GLenum err = glewInit();
 	return err == GLEW_OK || pGL->Error(FormatString("  gl: glewInit(): %s", reinterpret_cast<const char *>(glewGetErrorString(err))).getData());
 }
@@ -230,7 +231,9 @@ bool CStdGLCtx::CreateContext(int major, int minor, bool core)
 		return true;
 	}
 
-	return hrc && InitGLEW();
+	InitGLEW();
+	return hrc;
+
 #elif defined(USE_X11)
 	static int contextAttributes[]
 	{
