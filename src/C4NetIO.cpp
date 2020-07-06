@@ -1112,7 +1112,7 @@ bool C4NetIOTCP::Execute(int iMaxTime) // (mt-safe)
 #else
 					int iBytesToRead;
 #endif
-					if (::ioctlsocket(pPeer->GetSocket(), FIONREAD, &iBytesToRead) == SOCKET_ERROR)
+					if (::ioctlsocket(sock, FIONREAD, &iBytesToRead) == SOCKET_ERROR)
 					{
 						pPeer->Close();
 						if (pCB) pCB->OnDisconn(pPeer->GetAddr(), this, GetSocketErrorMsg());
