@@ -1040,7 +1040,7 @@ bool C4NetIOTCP::Execute(int iMaxTime) // (mt-safe)
 		pNext = pWait->Next;
 
 		// not closed?
-		if (pWait->sock)
+		if (pWait->sock != INVALID_SOCKET)
 		{
 #ifdef STDSCHEDULER_USE_EVENTS
 			// get event list
@@ -1050,11 +1050,11 @@ bool C4NetIOTCP::Execute(int iMaxTime) // (mt-safe)
 			if (wsaEvents.lNetworkEvents & FD_CONNECT)
 #else
 			// got connection?
-			if (FD_ISSET(pWait->sock, &fds[1]))
+			if (FD_ISSET(pWait->GetSocket(), &fds[1]))
 #endif
 			{
 				// remove from list
-				SOCKET sock = pWait->sock; pWait->sock = 0;
+				SOCKET sock = pWait->sock; pWait->sock = INVALID_SOCKET;
 
 #ifdef STDSCHEDULER_USE_EVENTS
 				// error?
@@ -1309,7 +1309,7 @@ bool C4NetIOTCP::Close(const addr_t &addr) // (mt-safe)
 	if (pWait)
 	{
 		// close socket, do callback
-		closesocket(pWait->sock); pWait->sock = 0;
+		closesocket(pWait->sock); pWait->sock = INVALID_SOCKET;
 		if (pCB) pCB->OnDisconn(pWait->addr, this, "closed");
 	}
 	else
@@ -1408,7 +1408,7 @@ void C4NetIOTCP::GetFDs(fd_set *pFDs, int *pMaxFD)
 	}
 	// add sockets
 	for (Peer *pPeer = pPeerList; pPeer; pPeer = pPeer->Next)
-		if (pPeer->GetSocket())
+		if (pPeer->GetSocket() != INVALID_SOCKET)
 		{
 			// Wait for socket to become readable
 			assert(!FD_ISSET(pPeer->GetSocket(), &pFDs[0]));
@@ -1656,7 +1656,7 @@ void C4NetIOTCP::OnShareFree(CStdCSecEx *pCSec)
 		while (pWait)
 		{
 			// delete?
-			if (!pWait->sock)
+			if (pWait->sock != INVALID_SOCKET)
 			{
 				// unlink
 				ConnectWait *pDelete = pWait;
@@ -1704,10 +1704,10 @@ void C4NetIOTCP::ClearConnectWaits() // (mt-safe)
 {
 	CStdShareLock PeerListLock(&PeerListCSec);
 	for (ConnectWait *pWait = pConnectWaits; pWait; pWait = pWait->Next)
-		if (pWait->sock)
+		if (pWait->sock != INVALID_SOCKET)
 		{
 			closesocket(pWait->sock);
-			pWait->sock = 0;
+			pWait->sock = INVALID_SOCKET;
 		}
 }
 
@@ -1891,7 +1891,7 @@ void C4NetIOTCP::Peer::Close() // (mt-safe)
 	if (!fOpen) return;
 	// close socket
 	closesocket(sock);
-	sock = 0;
+	sock = INVALID_SOCKET;
 	// set flag
 	fOpen = false;
 	// clear buffers
