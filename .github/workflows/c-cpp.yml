@@ -32,6 +32,8 @@ jobs:
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v1.0.0
     
+    - uses: seanmiddleditch/gha-setup-vsdevenv@master
+      
     - name: Configure
       run: cmake -G "Visual Studio 15 2017" -DCMAKE_BUILD_TYPE=RelWithDebInfo .
         
