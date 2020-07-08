@@ -24,7 +24,7 @@ jobs:
     - name: FMOD
       shell: powershell
       run: |
-        (New-Object System.Net.WebClient).DownloadFile("http://fulgen.bplaced.net/files/fmodapi375win.zip")
+        (New-Object System.Net.WebClient).DownloadFile("http://fulgen.bplaced.net/files/fmodapi375win.zip", "fmodapi375win.zip")
         7z.exe x fmodapi375win.zip
         copy fmodapi375win\api\inc\* deps\include
         copy fmodapi375win\api\lib\* deps\lib
