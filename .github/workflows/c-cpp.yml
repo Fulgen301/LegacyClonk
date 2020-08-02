@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
+  Windows:
 
     runs-on: windows-latest
 
@@ -52,5 +52,46 @@ jobs:
         
     - uses: actions/upload-artifact@v2
       with:
-        name: LegacyClonk.zip
+        name: Windows x86
         path: appdir/LegacyClonk.zip
+  
+  Linux:
+    strategy:
+      matrix:
+        arch: [x86, x64]
+    env:
+      PLATFORM: ${{ matrix.arch }}
+    
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Prepare build ramdisk
+        run: |
+          mkdir ramdisk
+          sudo mount -t tmpfs tmpfs ramdisk
+          cd ramdisk
+          if [ "$PLATFORM" = "x86"]; then
+              curl -L https://github.com/legacyclonk/ubuntu-1804-x86-chroot/releases/download/continuous-master/chroot.tar.xz | sudo tar xJ
+              curl -L https://raw.githubusercontent.com/legacyclonk/ubuntu-1804-x86-chroot/master/setup_chroot.sh | sudo bash -e -
+          fi
+      
+      - name: Build
+        run: |
+          cd ramdisk
+          if [ "$PLATFORM" = "x86"]; then
+            sudo rsync -rv --exclude=ramdisk .. chroot/legacyclonk
+            sudo chroot chroot bash -c 'cd /legacyclonk && appveyor/build.sh'
+            cp chroot/legacyclonk/build/LegacyClonk.tar.gz .
+          else
+            rsync -rv --exclude=ramdisk .. legacyclonk
+            cd legacyclonk
+            appveyor/build.sh
+            C4GROUP=$PWD/build/c4group tools/make_Graphics.c4g.sh
+            C4GROUP=$PWD/build/c4group tools/make_System.c4g.sh
+            mv build/LegacyClonk.tar.gz .
+          fi
+      
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ format("{{Linux {0}}}", matrix.arch) }}
+          path: LegacyClonk.tar.gz
