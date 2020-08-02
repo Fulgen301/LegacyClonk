@@ -29,17 +29,17 @@ jobs:
         copy fmodapi375win\api\inc\* deps\include
         copy fmodapi375win\api\lib\* deps\lib
     
-    - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1.0.0
-    
     - name: Setup VS Dev Environment
       uses: seanmiddleditch/gha-setup-vsdevenv@v1
+      with:
+        arch: x86
       
     - name: Configure
       run: cmake -G "Visual Studio 15 2017" -DCMAKE_BUILD_TYPE=RelWithDebInfo .
         
     - name: Build
-      run: msbuild LegacyClonk
+      run: cmake --build .
+    
     - name: Pack
       shell: cmd
       run: |
