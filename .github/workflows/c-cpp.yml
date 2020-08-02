@@ -7,43 +7,50 @@ on:
     branches: [ master ]
 
 jobs:
-  Linux:
-    strategy:
-      matrix:
-        arch: [x86, x64]
-    env:
-      PLATFORM: ${{ matrix.arch }}
-    
-    runs-on: ubuntu-18.04
-    steps:
-      - uses: actions/checkout@v2
-      - name: Prepare build ramdisk
-        run: |
-          mkdir ramdisk
-          sudo mount -t tmpfs tmpfs ramdisk
-          cd ramdisk
-          if [ "$PLATFORM" = "x86"]; then
-              curl -L https://github.com/legacyclonk/ubuntu-1804-x86-chroot/releases/download/continuous-master/chroot.tar.xz | sudo tar xJ
-              curl -L https://raw.githubusercontent.com/legacyclonk/ubuntu-1804-x86-chroot/master/setup_chroot.sh | sudo bash -e -
-          fi
-      
-      - name: Build
-        run: |
-          cd ramdisk
-          if [ "$PLATFORM" = "x86"]; then
-            sudo rsync -rv --exclude=ramdisk .. chroot/legacyclonk
-            sudo chroot chroot bash -c 'cd /legacyclonk && appveyor/build.sh'
-            cp chroot/legacyclonk/build/LegacyClonk.tar.gz .
-          else
-            rsync -rv --exclude=ramdisk .. legacyclonk
-            cd legacyclonk
-            appveyor/build.sh
-            C4GROUP=$PWD/build/c4group tools/make_Graphics.c4g.sh
-            C4GROUP=$PWD/build/c4group tools/make_System.c4g.sh
-            mv build/LegacyClonk.tar.gz .
-          fi
-      
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ format("{{Linux {0}}}", matrix.arch) }}
-          path: LegacyClonk.tar.gz
+  Windows:
+
+  runs-on: windows-latest
+
+  steps:
+  - uses: actions/checkout@v2
+  - name: Auto CRLF
+    shell: cmd
+    run: git config --global core.autocrlf true
+  - name: Dependencies
+    shell: powershell
+    run: |
+      (New-Object System.Net.WebClient).DownloadFile("http://assets.maxmitti.tk/openclonk-deps-vs140-i386-easy.7z", "openclonk-deps-vs140-i386-easy.7z")
+      7z.exe x openclonk-deps-vs140-i386-easy.7z
+  - name: FMOD
+    shell: powershell
+    run: |
+      (New-Object System.Net.WebClient).DownloadFile("http://fulgen.bplaced.net/files/fmodapi375win.zip", "fmodapi375win.zip")
+      7z.exe x fmodapi375win.zip
+      copy fmodapi375win\api\inc\* deps\include
+      copy fmodapi375win\api\lib\* deps\lib
+
+  - name: Setup VS Dev Environment
+    uses: seanmiddleditch/gha-setup-vsdevenv@v1
+    with:
+      arch: x86
+
+  - name: Configure
+    run: cmake -G "Visual Studio 16 2019" -DCMAKE_BUILD_TYPE=RelWithDebInfo -A Win32 .
+
+  - name: Build
+    run: cmake --build .
+
+  - name: Pack
+    shell: cmd
+    run: |
+      mkdir appdir
+      copy glew32.dll appdir
+      copy RelWithDebInfo\*.exe appdir
+      copy RelWithDebInfo\*.pdb appdir
+      cd appdir
+      7z a LegacyClonk.zip *
+
+  - uses: actions/upload-artifact@v2
+    with:
+      name: Windows x86
+      path: appdir/LegacyClonk.zip
