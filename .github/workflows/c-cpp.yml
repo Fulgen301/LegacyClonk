@@ -35,7 +35,7 @@ jobs:
         arch: x86
       
     - name: Configure
-      run: cmake -G "Visual Studio 15 2017" -DCMAKE_BUILD_TYPE=RelWithDebInfo .
+      run: cmake -G "Visual Studio 16 2019" -DCMAKE_BUILD_TYPE=RelWithDebInfo .
         
     - name: Build
       run: cmake --build .
