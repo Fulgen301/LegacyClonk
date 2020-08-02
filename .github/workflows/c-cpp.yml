@@ -7,54 +7,6 @@ on:
     branches: [ master ]
 
 jobs:
-  Windows:
-
-    runs-on: windows-latest
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Auto CRLF
-      shell: cmd
-      run: git config --global core.autocrlf true
-    - name: Dependencies
-      shell: powershell
-      run: |
-        (New-Object System.Net.WebClient).DownloadFile("http://assets.maxmitti.tk/openclonk-deps-vs140-i386-easy.7z", "openclonk-deps-vs140-i386-easy.7z")
-        7z.exe x openclonk-deps-vs140-i386-easy.7z
-    - name: FMOD
-      shell: powershell
-      run: |
-        (New-Object System.Net.WebClient).DownloadFile("http://fulgen.bplaced.net/files/fmodapi375win.zip", "fmodapi375win.zip")
-        7z.exe x fmodapi375win.zip
-        copy fmodapi375win\api\inc\* deps\include
-        copy fmodapi375win\api\lib\* deps\lib
-    
-    - name: Setup VS Dev Environment
-      uses: seanmiddleditch/gha-setup-vsdevenv@v1
-      with:
-        arch: x86
-      
-    - name: Configure
-      run: cmake -G "Visual Studio 16 2019" -DCMAKE_BUILD_TYPE=RelWithDebInfo -A Win32 .
-        
-    - name: Build
-      run: cmake --build .
-    
-    - name: Pack
-      shell: cmd
-      run: |
-        mkdir appdir
-        copy glew32.dll appdir
-        copy RelWithDebInfo\*.exe appdir
-        copy RelWithDebInfo\*.pdb appdir
-        cd appdir
-        7z a LegacyClonk.zip *
-        
-    - uses: actions/upload-artifact@v2
-      with:
-        name: Windows x86
-        path: appdir/LegacyClonk.zip
-  
   Linux:
     strategy:
       matrix:
