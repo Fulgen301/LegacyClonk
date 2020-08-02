@@ -69,7 +69,7 @@ jobs:
           mkdir ramdisk
           sudo mount -t tmpfs tmpfs ramdisk
           cd ramdisk
-          if [ "$PLATFORM" = "x86"]; then
+          if [ "$PLATFORM" = "x86" ]; then
               curl -L https://github.com/legacyclonk/ubuntu-1804-x86-chroot/releases/download/continuous-master/chroot.tar.xz | sudo tar xJ
               curl -L https://raw.githubusercontent.com/legacyclonk/ubuntu-1804-x86-chroot/master/setup_chroot.sh | sudo bash -e -
           fi
@@ -77,7 +77,7 @@ jobs:
       - name: Build
         run: |
           cd ramdisk
-          if [ "$PLATFORM" = "x86"]; then
+          if [ "$PLATFORM" = "x86" ]; then
             sudo rsync -rv --exclude=ramdisk .. chroot/legacyclonk
             sudo chroot chroot bash -c 'cd /legacyclonk && appveyor/build.sh'
             cp chroot/legacyclonk/build/LegacyClonk.tar.gz .
