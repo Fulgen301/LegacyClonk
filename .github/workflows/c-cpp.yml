@@ -55,12 +55,6 @@ jobs:
         path: appdir/LegacyClonk.zip
 
   Linux:
-    strategy:
-      matrix:
-        arch: [x86, x64]
-    env:
-      PLATFORM: ${{ matrix.arch }}
-
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
