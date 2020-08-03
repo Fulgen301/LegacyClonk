@@ -38,6 +38,8 @@ jobs:
     - name: Pack
       shell: cmd
       run: |
+        dir
+        exit 1
         mkdir appdir
         copy glew32.dll appdir
         copy RelWithDebInfo\*.exe appdir
