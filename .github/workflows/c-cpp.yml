@@ -93,4 +93,4 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ format('{{Linux {0}}}', matrix.arch) }}
-          path: LegacyClonk.tar.gz
+          path: legacyclonk/LegacyClonk.tar.gz
