@@ -30,16 +30,14 @@ jobs:
         arch: x86
 
     - name: Configure
-      run: cmake -G "Visual Studio 16 2019" -DCMAKE_BUILD_TYPE=RelWithDebInfo -A Win32 .
+      run: cmake -G "Visual Studio 16 2019" -A Win32 .
 
     - name: Build
-      run: cmake --build .
+      run: cmake --build . --config RelWithDebInfo
 
     - name: Pack
       shell: cmd
       run: |
-        dir
-        exit 1
         mkdir appdir
         copy glew32.dll appdir
         copy RelWithDebInfo\*.exe appdir
