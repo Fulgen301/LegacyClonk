@@ -87,25 +87,25 @@ jobs:
           fi
 
       - uses: actions/upload-artifact@v2
-        if: ${{ matrix.os == 'x64' }}
+        if: ${{ matrix.arch == 'x64' }}
         with:
           name: Linux x64
           path: ramdisk/legacyclonk/LegacyClonk.tar.gz
       
       - uses: actions/upload-artifact@v2
-        if: ${{ matrix.os == 'x64' }}
+        if: ${{ matrix.arch == 'x64' }}
         with:
           name: Graphics.c4g
           path: ramdisk/legacyclonk/Graphics.c4g
 
       - uses: actions/upload-artifact@v2
-        if: ${{ matrix.os == 'x64' }}
+        if: ${{ matrix.arch == 'x64' }}
         with:
           name: System.c4g
           path: ramdisk/legacyclonk/System.c4g
       
       - uses: actions/upload-artifact@v2
-        if: ${{ matrix.os == 'x86' }}
+        if: ${{ matrix.arch == 'x86' }}
         with:
           name: Linux x86
           path: ramdisk/LegacyClonk.tar.gz
