@@ -17,26 +17,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-latest
-            arch: x86
-            env: Windows
-          - os: windows-latest
-            arch: x86
-            env: Windows
-            config: Debugrec
-          - os: windows-latest
-            arch: x64
-            env: Windows
-          - os: ubuntu-20.04
-            arch: x64
-            env: Linux
-          - os: ubuntu-20.04
-            arch: x64
-            env: Linux
-            config: Debugrec
-          - os: ubuntu-20.04
-            arch: x86
-            env: Linux
           - os: macos-12
             arch: x64
             env: Mac
@@ -58,28 +38,14 @@ jobs:
         run: |
           autobuild/${{ matrix.env }}-${{ matrix.arch }}.sh
 
-      - name: "Linux x86: Setup chroot"
-        if: ${{ matrix.env == 'Linux' && matrix.arch == 'x86' }}
-        run: |
-          curl -L https://github.com/legacyclonk/ubuntu-1804-x86-chroot/releases/download/2020-09-26/chroot.tar.xz | sudo tar -xJ
-          curl -L https://raw.githubusercontent.com/legacyclonk/ubuntu-1804-x86-chroot/master/setup_chroot.sh | sudo bash -e -
-          sudo mkdir -p chroot/$PWD
-          sudo mount --bind . chroot/$PWD
-
-      - name: "Linux: Setup"
-        if: ${{ matrix.env == 'Linux' }}
-        run: $CHROOT autobuild/setup_linux.sh
-
       - name: "Mac: Work around libpng mess"
         if: ${{ matrix.env == 'Mac' }}
         run: sudo rm -r /Library/Frameworks/Mono.framework/Headers
-
-      - name: "Windows: Setup VS Dev Environment"
-        if: ${{ matrix.env == 'Windows' }}
-        uses: seanmiddleditch/gha-setup-vsdevenv@v3
-        with:
-          arch: ${{ env.VS_ARCH }}
-
+      
+      - name: "Mac: Install gcc"
+        if: ${{ matrix.env == 'Mac' }}
+        run: brew install gcc
+      
       - name: "Dependencies"
         run: |
           mkdir deps
@@ -101,24 +67,6 @@ jobs:
         run: |
           $CHROOT cmake --build build $CMAKE_BUILD_ARGS
 
-      - name: "Build c4gs"
-        if: ${{ matrix.env == 'Linux' && matrix.arch == 'x64' }}
-        run: |
-          C4GROUP=$PWD/build/c4group tools/make_Graphics.c4g.sh
-          C4GROUP=$PWD/build/c4group tools/make_System.c4g.sh
-
-      - name: "Windows: Collect binaries"
-        if: ${{ matrix.env == 'Windows' }}
-        run: |
-          cd build
-          mv RelWithDebInfo/*.{exe,pdb} ../output
-
-      - name: "Linux: Collect binaries"
-        if: ${{ matrix.env == 'Linux' }}
-        run: |
-          cd build
-          cp clonk c4group ../output
-
       - name: "Mac: Create Bundle"
         if: ${{ matrix.env == 'Mac' }}
         run: |
@@ -132,60 +80,8 @@ jobs:
           name: ${{ env.CONFIG_SUFFIX }}
           path: output/*
 
-      - name: "Publish System.c4g"
-        if: ${{ matrix.env == 'Linux' && matrix.arch == 'x64' }}
-        uses: actions/upload-artifact@v2
-        with:
-          name: System.c4g
-          path: System.c4g
-
-      - name: "Publish Graphics.c4g"
-        if: ${{ matrix.env == 'Linux' && matrix.arch == 'x64' }}
-        uses: actions/upload-artifact@v2
-        with:
-          name: Graphics.c4g
-          path: Graphics.c4g
-
-      - name: "Pack: Windows"
-        if: ${{ matrix.env == 'Windows' }}
-        run: |
-          cd output
-          7z a LegacyClonk-$CONFIG_SUFFIX.zip *
-
-      - name: "Pack: Linux"
-        if: ${{ matrix.env == 'Linux' }}
-        run: |
-          cd output
-          tar czf LegacyClonk-$CONFIG_SUFFIX.tar.gz *
-
       - name: "Pack: Mac"
         if: ${{ matrix.env == 'Mac' }}
         run: |
           cd output
           zip -r LegacyClonk-$CONFIG_SUFFIX.zip *
-
-      - name: "Release: Windows / Mac"
-        uses: softprops/action-gh-release@v1
-        if: ${{ startsWith(github.ref, 'refs/tags/') && matrix.env != 'Linux' }}
-        with:
-          files: output/LegacyClonk-${{ env.CONFIG_SUFFIX }}.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: "Release: Linux"
-        uses: softprops/action-gh-release@v1
-        if: ${{ startsWith(github.ref, 'refs/tags/') && matrix.env == 'Linux' }}
-        with:
-          files: output/LegacyClonk-${{ env.CONFIG_SUFFIX }}.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: "Release: c4gs"
-        uses: softprops/action-gh-release@v1
-        if: ${{ startsWith(github.ref, 'refs/tags/') && matrix.env == 'Linux' && matrix.arch == 'x64' }}
-        with:
-          files: |
-            System.c4g
-            Graphics.c4g
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
