@@ -42,10 +42,6 @@ jobs:
         if: ${{ matrix.env == 'Mac' }}
         run: sudo rm -r /Library/Frameworks/Mono.framework/Headers
       
-      - name: "Mac: Install gcc"
-        if: ${{ matrix.env == 'Mac' }}
-        run: brew install gcc
-      
       - name: "Dependencies"
         run: |
           mkdir deps
