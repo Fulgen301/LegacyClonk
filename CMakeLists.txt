@@ -28,6 +28,10 @@ endif ()
 
 project("LegacyClonk")
 
+if (APPLE)
+	enable_language(OBJCXX)
+endif ()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -193,6 +197,7 @@ if (WIN32)
 	append_filelist(CLONK_SOURCES EngineWin32.txt)
 elseif (APPLE)
 	append_filelist(CLONK_SOURCES EngineApple.txt)
+	set_source_files_properties(src/MacUtility.mm PROPERTIES LANGUAGE OBJCXX)
 endif ()
 
 if (USE_SDL_MAINLOOP OR USE_SDL_MIXER)
