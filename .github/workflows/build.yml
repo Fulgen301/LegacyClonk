@@ -1,7 +1,19 @@
 name: Build Binaries
 
 on:
-  workflow_call
+  workflow_call:
+    inputs:
+      extract-version:
+        type: boolean
+        description: "Extract version info from C4Version.h"
+        required: false
+        default: false
+    outputs:
+      objversion:
+        value: ${{ jobs.build-binaries.outputs.objversion }}
+      buildversion:
+        value: ${{ jobs.build-binaries.outputs.buildversion }}
+
 
 defaults:
   run:
@@ -10,6 +22,9 @@ defaults:
 jobs:
   build-binaries:
     name: Build Binaries
+    outputs:
+      objversion: ${{ steps.parse-version-number.outputs.objversion }}
+      buildversion: ${{ steps.parse-version-number.outputs.buildversion }}
     strategy:
       fail-fast: false
       matrix:
@@ -52,6 +67,15 @@ jobs:
       - name: "Configure Platform Architecture"
         run: |
           autobuild/${{ matrix.os }}-${{ matrix.arch }}.sh
+      
+      - name: Parse version number
+        id: parse-version-number
+        if: ${{ matrix.include-groups && inputs.extract-version }}
+        run: |
+          OBJVERSION=grep -P '#define C4XVER\d' src/C4Version.h | cut -d ' ' -f3 | paste -sd .
+          echo "objversion=$OBJVERSION" >> $GITHUB_OUTPUT
+          BUILDVERSION=grep -P '#define C4XVERBUILD' src/C4Version.h | cut -d ' ' -f3
+          echo "buildversion=$BUILDVERSION" >> $GITHUB_OUTPUT
 
       - name: "Linux: Setup"
         if: ${{ matrix.os == 'Linux' }}
