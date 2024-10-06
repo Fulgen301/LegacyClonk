@@ -13,34 +13,4 @@ defaults:
 
 jobs:
   Autobuild:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runner: windows-latest
-            arch: x86
-            os: Windows
-          - runner: windows-latest
-            arch: x86
-            os: Windows
-            config: Debugrec
-          - runner: windows-latest
-            arch: x64
-            os: Windows
-          - runner: ubuntu-20.04
-            arch: x64
-            os: Linux
-          - runner: ubuntu-20.04
-            arch: x64
-            os: Linux
-            config: Debugrec
-          - runner: macos-13
-            arch: x64
-            os: Mac
     uses: './.github/workflows/build.yml'
-    with:
-      os: ${{ matrix.os }}
-      arch: ${{ matrix.arch }}
-      runner: ${{ matrix.runner }}
-      debugrec: ${{ matrix.config == 'Debugrec' }}
-      include-groups: ${{ matrix.os == 'Linux' && matrix.config != 'Debugrec' }}
