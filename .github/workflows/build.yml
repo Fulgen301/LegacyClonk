@@ -1,30 +1,7 @@
 name: Build Binaries
 
 on:
-  workflow_call:
-    inputs:
-      os:
-        type: string
-        required: true
-      runner:
-        type: string
-        required: true
-      arch:
-        type: string
-        required: true
-      debugrec:
-        type: boolean
-        required: true
-      include-groups:
-        type: boolean
-        required: true
-    outputs:
-      engine-artifact-id:
-        description: "The artifact ID of the engine binaries"
-        value: ${{ jobs.build-binaries.outputs.engine-artifact-id }}
-      c4group-artifact-id:
-        description: "The artifact ID of the c4group binaries"
-        value: ${{ jobs.build-binaries.outputs.c4group-artifact-id }}
+  workflow_call
 
 defaults:
   run:
@@ -35,10 +12,30 @@ jobs:
     name: Build Binaries
     strategy:
       fail-fast: false
-    runs-on: ${{ inputs.runner }}
-    outputs:
-      engine-artifact-id: ${{ steps.publish-engine.outputs.artifact_id }}
-      c4group-artifact-id: ${{ steps.publish-c4group.outputs.artifact_id }}
+      matrix:
+        include:
+          - runner: windows-latest
+            arch: x86
+            os: Windows
+          - runner: windows-latest
+            arch: x86
+            os: Windows
+            debugrec: true
+          - runner: windows-latest
+            arch: x64
+            os: Windows
+          - runner: ubuntu-20.04
+            arch: x64
+            os: Linux
+            include-groups: true
+          - runner: ubuntu-20.04
+            arch: x64
+            os: Linux
+            debugrec: true
+          - runner: macos-13
+            arch: x64
+            os: Mac
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -49,23 +46,23 @@ jobs:
 
       - name: "Configure Platform"
         run: |
-          echo "CONFIG_SUFFIX=${{ inputs.os }}-${{ inputs.arch }}" >> $GITHUB_ENV
-          autobuild/${{ inputs.os }}.sh
+          echo "CONFIG_SUFFIX=${{ matrix.os }}-${{ matrix.arch }}" >> $GITHUB_ENV
+          autobuild/${{ matrix.os }}.sh
 
       - name: "Configure Platform Architecture"
         run: |
-          autobuild/${{ inputs.os }}-${{ inputs.arch }}.sh
+          autobuild/${{ matrix.os }}-${{ matrix.arch }}.sh
 
       - name: "Linux: Setup"
-        if: ${{ inputs.os == 'Linux' }}
+        if: ${{ matrix.os == 'Linux' }}
         run: $CHROOT autobuild/setup_linux.sh
 
       - name: "Mac: Work around libpng mess"
-        if: ${{ inputs.os == 'Mac' }}
+        if: ${{ matrix.os == 'Mac' }}
         run: sudo rm -r /Library/Frameworks/Mono.framework/Headers
 
       - name: "Windows: Setup VS Dev Environment"
-        if: ${{ inputs.os == 'Windows' }}
+        if: ${{ matrix.os == 'Windows' }}
         uses: seanmiddleditch/gha-setup-vsdevenv@v4
         with:
           arch: ${{ env.VS_ARCH }}
@@ -82,13 +79,13 @@ jobs:
           $CHROOT cmake -B build . -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DUSE_TESTS=On -DCMAKE_CTEST_ARGUMENTS=--output-on-failure $CMAKE_CONFIGURE_ARGS
 
       - name: "Enable Debugrec"
-        if: ${{ inputs.debugrec }}
+        if: ${{ matrix.debugrec }}
         run: |
           cmake -B build -DDEBUGREC=On
-          echo "CONFIG_SUFFIX=${{ inputs.os }}-${{ inputs.arch }}-debugrec" >> $GITHUB_ENV
+          echo "CONFIG_SUFFIX=${{ matrix.os }}-${{ matrix.arch }}-debugrec" >> $GITHUB_ENV
 
       - name: "Disable PCH"
-        if: ${{ inputs.debugrec && inputs.os == 'Linux' }}
+        if: ${{ matrix.debugrec && matrix.os == 'Linux' }}
         run: |
           cmake -B build -DUSE_PCH=Off
 
@@ -101,24 +98,24 @@ jobs:
           $CHROOT cmake --build build --target test
 
       - name: "Windows: Collect binaries"
-        if: ${{ inputs.os == 'Windows' }}
+        if: ${{ matrix.os == 'Windows' }}
         run: |
           cd build
           mv *.{exe,pdb} ../output
 
       - name: "Linux: Collect binaries"
-        if: ${{ inputs.os == 'Linux' }}
+        if: ${{ matrix.os == 'Linux' }}
         run: |
           cd build
           cp clonk c4group ../output
 
       - name: "Linux: Create AppImage"
-        if: ${{ inputs.os == 'Linux' }}
+        if: ${{ matrix.os == 'Linux' }}
         run: |
           tools/make_AppImage.sh
 
       - name: "Mac: Create Bundle"
-        if: ${{ inputs.os == 'Mac' }}
+        if: ${{ matrix.os == 'Mac' }}
         run: |
           cd build
           DESTDIR=inst ninja install
@@ -139,20 +136,20 @@ jobs:
           path: output/c4group*
 
       - name: "Build c4gs"
-        if: ${{ inputs.include-groups }}
+        if: ${{ matrix.include-groups }}
         run: |
           C4GROUP=$PWD/build/c4group tools/make_Graphics.c4g.sh
           C4GROUP=$PWD/build/c4group tools/make_System.c4g.sh
 
       - name: "Publish System.c4g"
-        if: ${{ inputs.include-groups }}
+        if: ${{ matrix.include-groups }}
         uses: actions/upload-artifact@v4
         with:
           name: System.c4g
           path: System.c4g
 
       - name: "Publish Graphics.c4g"
-        if: ${{ inputs.include-groups }}
+        if: ${{ matrix.include-groups }}
         uses: actions/upload-artifact@v4
         with:
           name: Graphics.c4g
