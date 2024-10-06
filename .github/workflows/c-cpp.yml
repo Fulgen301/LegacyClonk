@@ -3,7 +3,7 @@ name: Autobuild
 on:
   push:
     branches-ignore: 'build-test*'
-    tags: '*'
+    tags-ignore: '*'
   pull_request:
     branches: '*'
 
