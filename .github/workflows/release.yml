@@ -8,7 +8,7 @@ on:
 
 defaults:
   run:
-    shell: bash
+    shell: pwsh
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -19,23 +19,70 @@ jobs:
     name: Generate CI Configuration
     uses: './.github/workflows/ci-config.yml'
 
-  build:
+  build-binaries:
+    name: Build Binaries
     needs: [generate-ci-config]
     uses: './.github/workflows/build.yml'
     with:
       matrix: ${{ needs.generate-ci-config.outputs.matrix }}
 
   build-content:
+    name: Pack content groups
     runs-on: ubuntu-latest
-    needs: [build]
+    needs: [generate-ci-config, build-binaries]
 
     steps:
       - uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/content
+          path: content
 
       - uses: actions/download-artifact@v4
         with:
           name: Linux-x64-c4group
-      - run: ls -R
 
+  build-system-graphics-updates:
+    name: "Update Groups: System.c4g & Graphics.c4g"
+    runs-on: ubuntu-latest
+    needs: [generate-ci-config, build-binaries]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            autobuild
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: System.c4g
+      - uses: actions/download-artifact@v4
+        with:
+          name: Graphics.c4g
+      - uses: actions/download-artifact@v4
+        with:
+          name: Linux-x64-c4group
+
+      - name: Create output directory
+        run: New-Item -Path output -ItemType Directory
+      - name: Set environment variables
+        run: |
+          "OBJVERSION=${{ needs.generate-ci-config.outputs.objversion }}" >> $Env:GITHUB_ENV
+          "VERSION=${{ needs.generate-ci-config.outputs.buildversion }}" >> $Env:GITHUB_ENV
+          "C4GROUP=./c4group" >> $Env:GITHUB_ENV
+
+      - name: Create System.c4g update group
+        run: autobuild/MakeEngineUpdateGroups.ps1 -GroupPath System.c4g -OutDir output
+      - name: Create Graphics.c4g update group
+        run: autobuild/MakeEngineUpdateGroups.ps1 -GroupPath Graphics.c4g -OutDir output
+
+      - name: Publish System.c4g
+        uses: actions/upload-artifact@v4
+        with:
+          name: System.c4g
+          path: output/System.c4g.c4u
+
+      - name: Publish Graphics.c4g
+        uses: actions/upload-artifact@v4
+        with:
+          name: Graphics.c4g
+          path: output/Graphics.c4g.c4u

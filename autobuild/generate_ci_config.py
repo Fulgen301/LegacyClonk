@@ -30,4 +30,5 @@ def print_output(toml: dict, name: str, transform: collections.abc.Callable[[Tom
 
 if __name__ == "__main__":
     toml = tomllib.load(open(sys.argv[1], "rb"))
+    print_output(toml, "groups")
     print_output(toml, "matrix", transform_matrix)
