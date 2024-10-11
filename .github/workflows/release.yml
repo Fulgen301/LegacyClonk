@@ -45,6 +45,8 @@ jobs:
     name: "Update Groups: System.c4g & Graphics.c4g"
     runs-on: windows-latest
     needs: [generate-ci-config, build-binaries]
+    env:
+      LC_GROUPS: ${{ needs.generate-ci-config.outputs.groups }}
 
     steps:
       - uses: actions/checkout@v4

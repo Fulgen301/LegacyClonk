@@ -2,6 +2,8 @@ name: Generate CI Configuration
 on:
   workflow_call:
     outputs:
+      groups:
+        value: ${{ jobs.generate-ci-config.outputs.groups }}
       matrix:
         value: ${{ jobs.generate-ci-config.outputs.matrix }}
       objversion:
@@ -17,6 +19,7 @@ jobs:
   generate-ci-config:
     name: Generate CI Configuration
     outputs:
+      groups: ${{ steps.generate-ci-config.outputs.groups }}
       matrix: ${{ steps.generate-ci-config.outputs.matrix }}
       objversion: ${{ steps.generate-ci-config.outputs.objversion }}
       buildversion: ${{ steps.generate-ci-config.outputs.buildversion }}
