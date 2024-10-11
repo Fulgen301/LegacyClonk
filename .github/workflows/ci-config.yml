@@ -30,10 +30,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - id: generate-ci-config
+      - name: Generate CI config
+        id: generate-ci-config
         run: |
           python3 autobuild/generate_ci_config.py autobuild/ci.toml >> $GITHUB_OUTPUT
-      - id: extract-version
+      - name: Extract version numbers
+        id: extract-version
         run: |
           OBJVERSION=$(grep -P '#define C4XVER\d' src/C4Version.h | cut -d ' ' -f3 | paste -sd .)
           echo "objversion=$OBJVERSION" >> $GITHUB_OUTPUT
