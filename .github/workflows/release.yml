@@ -77,14 +77,14 @@ jobs:
       - name: Create Graphics.c4g update group
         run: autobuild/MakeEngineUpdateGroups.ps1 -GroupPath Graphics.c4g -OutDir output
 
-      - name: Publish System.c4g
+      - name: Publish System.c4g.c4u
         uses: actions/upload-artifact@v4
         with:
-          name: System.c4g
+          name: System.c4g.c4u
           path: output/System.c4g.c4u
 
-      - name: Publish Graphics.c4g
+      - name: Publish Graphics.c4g.c4u
         uses: actions/upload-artifact@v4
         with:
-          name: Graphics.c4g
+          name: Graphics.c4g.c4u
           path: output/Graphics.c4g.c4u
