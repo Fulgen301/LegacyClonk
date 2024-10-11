@@ -4,6 +4,10 @@ on:
     outputs:
       matrix:
         value: ${{ jobs.generate-ci-config.outputs.matrix }}
+      objversion:
+        value: ${{ jobs.generate-ci-config.outputs.objversion }}
+      buildversion:
+        value: ${{ jobs.generate-ci-config.outputs.buildversion }}
 
 defaults:
   run:
@@ -14,12 +18,15 @@ jobs:
     name: Generate CI Configuration
     outputs:
       matrix: ${{ steps.generate-ci-config.outputs.matrix }}
+      objversion: ${{ steps.generate-ci-config.outputs.objversion }}
+      buildversion: ${{ steps.generate-ci-config.outputs.buildversion }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           sparse-checkout: |
             autobuild
+            src
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
