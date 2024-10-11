@@ -28,7 +28,7 @@ jobs:
 
   build-content:
     name: Pack content groups
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     needs: [generate-ci-config, build-binaries]
 
     steps:
@@ -39,11 +39,11 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: Linux-x64-c4group
+          name: Windows-x64-c4group
 
   build-system-graphics-updates:
     name: "Update Groups: System.c4g & Graphics.c4g"
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     needs: [generate-ci-config, build-binaries]
 
     steps:
@@ -60,7 +60,7 @@ jobs:
           name: Graphics.c4g
       - uses: actions/download-artifact@v4
         with:
-          name: Linux-x64-c4group
+          name: Windows-x64-c4group
 
       - name: Create output directory
         run: New-Item -Path output -ItemType Directory
@@ -68,7 +68,7 @@ jobs:
         run: |
           "OBJVERSION=${{ needs.generate-ci-config.outputs.objversion }}" >> $Env:GITHUB_ENV
           "VERSION=${{ needs.generate-ci-config.outputs.buildversion }}" >> $Env:GITHUB_ENV
-          "C4GROUP=./c4group" >> $Env:GITHUB_ENV
+          "C4GROUP=./c4group.exe" >> $Env:GITHUB_ENV
 
       - name: Create System.c4g update group
         run: autobuild/MakeEngineUpdateGroups.ps1 -GroupPath System.c4g -OutDir output

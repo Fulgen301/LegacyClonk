@@ -55,17 +55,18 @@ runner = 'windows-latest'
 [[matrix.windows.config]]
 arch = 'x64'
 vs_arch = 'amd64'
+include-groups = true
 
 #[[matrix.windows.config]]
 #arch = 'x86'
 #debugrec = true
 
-[matrix.linux]
-runner = 'ubuntu-20.04'
+#[matrix.linux]
+#runner = 'ubuntu-20.04'
 
-[[matrix.linux.config]]
-arch = 'x64'
-include-groups = true
+#[[matrix.linux.config]]
+#arch = 'x64'
+#include-groups = true
 
 #[[matrix.linux.config]]
 #arch = 'x64'
