@@ -49,16 +49,16 @@ parts = [
 [matrix.windows]
 runner = 'windows-latest'
 
-[[matrix.windows.config]]
-arch = 'x86'
+#[[matrix.windows.config]]
+#arch = 'x86'
 
 [[matrix.windows.config]]
 arch = 'x64'
 vs_arch = 'amd64'
 
-[[matrix.windows.config]]
-arch = 'x86'
-debugrec = true
+#[[matrix.windows.config]]
+#arch = 'x86'
+#debugrec = true
 
 [matrix.linux]
 runner = 'ubuntu-20.04'
@@ -67,12 +67,12 @@ runner = 'ubuntu-20.04'
 arch = 'x64'
 include-groups = true
 
-[[matrix.linux.config]]
-arch = 'x64'
-debugrec = true
+#[[matrix.linux.config]]
+#arch = 'x64'
+#debugrec = true
 
-[matrix.mac]
-runner = 'macos-13'
+#[matrix.mac]
+#runner = 'macos-13'
 
-[[matrix.mac.config]]
-arch = 'x64'
+#[[matrix.mac.config]]
+#arch = 'x64'
