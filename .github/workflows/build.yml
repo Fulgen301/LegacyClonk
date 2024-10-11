@@ -3,6 +3,10 @@ name: Build Binaries
 on:
   workflow_call:
     inputs:
+      matrix:
+        type: string
+        description: "Matrix to use for build"
+        required: true
       extract-version:
         type: boolean
         description: "Extract version info from C4Version.h"
@@ -22,35 +26,14 @@ defaults:
 jobs:
   build-binaries:
     name: Build Binaries
+    runs-on: ${{ matrix.runner }}
     outputs:
       objversion: ${{ steps.parse-version-number.outputs.objversion }}
       buildversion: ${{ steps.parse-version-number.outputs.buildversion }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - runner: windows-latest
-            arch: x86
-            os: Windows
-          - runner: windows-latest
-            arch: x86
-            os: Windows
-            debugrec: true
-          - runner: windows-latest
-            arch: x64
-            os: Windows
-          - runner: ubuntu-20.04
-            arch: x64
-            os: Linux
-            include-groups: true
-          - runner: ubuntu-20.04
-            arch: x64
-            os: Linux
-            debugrec: true
-          - runner: macos-13
-            arch: x64
-            os: Mac
-    runs-on: ${{ matrix.runner }}
+        include: ${{ fromJson(inputs.matrix) }}
     steps:
       - uses: actions/checkout@v3
         with:

@@ -12,5 +12,12 @@ defaults:
     shell: bash
 
 jobs:
+  generate-ci-config:
+    name: Generate CI Configuration
+    uses: './.github/workflows/ci-config.yml'
+
   Autobuild:
+    needs: [generate-ci-config]
     uses: './.github/workflows/build.yml'
+    with:
+      matrix: ${{ needs.generate-ci-config.outputs.matrix }}

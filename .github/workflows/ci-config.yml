@@ -1,0 +1,34 @@
+name: Generate CI Configuration
+on:
+  workflow_call:
+    outputs:
+      matrix:
+        value: ${{ jobs.generate-ci-config.outputs.matrix }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  generate-ci-config:
+    name: Generate CI Configuration
+    outputs:
+      matrix: ${{ steps.generate-ci-config.outputs.matrix }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            autobuild
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - id: generate-ci-config
+        run: |
+          python3 autobuild/generate_ci_config.py autobuild/ci.toml >> $GITHUB_OUTPUT
+      - id: extract-version
+        run: |
+          OBJVERSION=$(grep -P '#define C4XVER\d' src/C4Version.h | cut -d ' ' -f3 | paste -sd .)
+          echo "objversion=$OBJVERSION" >> $GITHUB_OUTPUT
+          BUILDVERSION=$(grep -P '#define C4XVERBUILD' src/C4Version.h | cut -d ' ' -f3)
+          echo "buildversion=$BUILDVERSION" >> $GITHUB_OUTPUT

@@ -15,8 +15,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  generate-ci-config:
+    name: Generate CI Configuration
+    uses: './.github/workflows/ci-config.yml'
+
   build:
+    needs: [generate-ci-config]
     uses: './.github/workflows/build.yml'
+    with:
+      matrix: ${{ needs.generate-ci-config.outputs.matrix }}
 
   build-content:
     runs-on: ubuntu-latest
