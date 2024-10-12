@@ -90,8 +90,8 @@ allow-missing-target = true
 [matrix.windows]
 runner = 'windows-latest'
 
-#[[matrix.windows.config]]
-#arch = 'x86'
+[[matrix.windows.config]]
+arch = 'x86'
 
 [[matrix.windows.config]]
 arch = 'x64'
