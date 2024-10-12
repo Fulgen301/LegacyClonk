@@ -46,7 +46,10 @@ jobs:
     runs-on: windows-latest
     needs: [generate-ci-config, build-binaries]
     env:
+      C4GROUP: ./c4group.exe
       LC_GROUPS: ${{ needs.generate-ci-config.outputs.groups }}
+      OBJVERSION: ${{ needs.generate-ci-config.outputs.objversion }}
+      VERSION: ${{ needs.generate-ci-config.outputs.buildversion }}
 
     steps:
       - uses: actions/checkout@v4
@@ -66,11 +69,6 @@ jobs:
 
       - name: Create output directory
         run: New-Item -Path output -ItemType Directory
-      - name: Set environment variables
-        run: |
-          "OBJVERSION=${{ needs.generate-ci-config.outputs.objversion }}" >> $Env:GITHUB_ENV
-          "VERSION=${{ needs.generate-ci-config.outputs.buildversion }}" >> $Env:GITHUB_ENV
-          "C4GROUP=./c4group.exe" >> $Env:GITHUB_ENV
 
       - name: Create System.c4g update group
         run: autobuild/MakeEngineUpdateGroups.ps1 -GroupPath System.c4g -OutDir output
