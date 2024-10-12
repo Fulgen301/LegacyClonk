@@ -33,6 +33,8 @@ jobs:
     env:
       C4GROUP: ../c4group.exe
       LC_GROUPS: ${{ needs.generate-ci-config.outputs.groups }}
+      OBJVERSION: ${{ needs.generate-ci-config.outputs.objversion }}
+      VERSION: ${{ needs.generate-ci-config.outputs.buildversion }}
 
     steps:
       - uses: actions/checkout@v4
