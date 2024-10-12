@@ -115,3 +115,27 @@ jobs:
         with:
           name: Graphics.c4g.c4u
           path: output/Graphics.c4g.c4u
+
+  pack-zips:
+    name: Pack ZIP Archives
+    runs-on: windows-latest
+    needs: [generate-ci-config, build-content, build-system-graphics-updates]
+    env:
+      OBJVERSION: ${{ needs.generate-ci-config.outputs.objversion }}
+      VERSION: ${{ needs.generate-ci-config.outputs.buildversion }}
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: clonk-*
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: c4group-*
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: '*.c4g'
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: content
+      - run: ls -R .
