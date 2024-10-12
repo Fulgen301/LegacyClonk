@@ -12,7 +12,7 @@ $tempDir = [System.IO.Directory]::CreateTempSubdirectory()
 
 $downloadedParts = [System.Collections.Generic.List[object]]::new()
 
-foreach ($part in $parts | Select-Object -Last 2) {
+foreach ($part in $parts) {
     Write-Output "Downloading $part..."
     $job = Start-ThreadJob -ScriptBlock {
         $partName = Split-Path -Path $using:part -Leaf
