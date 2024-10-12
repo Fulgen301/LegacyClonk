@@ -21,8 +21,8 @@ jobs:
     outputs:
       groups: ${{ steps.generate-ci-config.outputs.groups }}
       matrix: ${{ steps.generate-ci-config.outputs.matrix }}
-      objversion: ${{ steps.generate-ci-config.outputs.objversion }}
-      buildversion: ${{ steps.generate-ci-config.outputs.buildversion }}
+      objversion: ${{ steps.extract-version.outputs.objversion }}
+      buildversion: ${{ steps.extract-version.outputs.buildversion }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
