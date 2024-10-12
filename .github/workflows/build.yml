@@ -109,14 +109,14 @@ jobs:
         id: publish-engine
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.CONFIG_SUFFIX }}
+          name: clonk-${{ env.CONFIG_SUFFIX }}
           path: output/clonk*
 
       - name: "Publish c4group"
         id: publish-c4group
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.CONFIG_SUFFIX }}-c4group
+          name: c4group-${{ env.CONFIG_SUFFIX }}
           path: output/c4group*
 
       - name: "Build c4gs"

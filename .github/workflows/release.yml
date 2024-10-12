@@ -48,7 +48,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: Windows-x64-c4group
+          name: c4group-Windows-x64
 
       - name: Create output directory
         run: New-Item -Path content/output -ItemType Directory
@@ -94,7 +94,7 @@ jobs:
           name: Graphics.c4g
       - uses: actions/download-artifact@v4
         with:
-          name: Windows-x64-c4group
+          name: c4group-Windows-x64
 
       - name: Create output directory
         run: New-Item -Path output -ItemType Directory
