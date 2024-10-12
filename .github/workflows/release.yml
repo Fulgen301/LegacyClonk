@@ -31,7 +31,7 @@ jobs:
     runs-on: windows-latest
     needs: [generate-ci-config, build-binaries]
     env:
-      C4GROUP: ./c4group.exe
+      C4GROUP: ../c4group.exe
       LC_GROUPS: ${{ needs.generate-ci-config.outputs.groups }}
 
     steps:
@@ -49,23 +49,24 @@ jobs:
           name: Windows-x64-c4group
 
       - name: Create output directory
-        run: New-Item -Path output -ItemType Directory
+        run: New-Item -Path content/output -ItemType Directory
 
       - name: Pack groups & create updates
         run: |
-          autobuild/MakeContentGroupsAndUpdateGroups.ps1 -OutDir output
+          Set-Location content
+          ../autobuild/MakeContentGroupsAndUpdateGroups.ps1 -OutDir output
 
       - name: Publish content
         uses: actions/upload-artifact@v4
         with:
           name: content
-          path: output/*.c4[dgf]
+          path: content/output/*.c4[dgf]
 
       - name: Publish content updates
         uses: actions/upload-artifact@v4
         with:
           name: content-updates
-          path: output/*.c4[dgf].c4u
+          path: content/output/*.c4[dgf].c4u
 
   build-system-graphics-updates:
     name: "Update Groups: System.c4g & Graphics.c4g"
