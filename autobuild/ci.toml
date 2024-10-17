@@ -92,14 +92,17 @@ runner = 'windows-latest'
 
 [[matrix.windows.config]]
 arch = 'x86'
+platform-suffix = 'win32'
 
 [[matrix.windows.config]]
 arch = 'x64'
+platform-suffix = 'win64'
 vs_arch = 'amd64'
 include-groups = true
 
 #[[matrix.windows.config]]
 #arch = 'x86'
+#platform-suffix = 'win32'
 #debugrec = true
 
 #[matrix.linux]
@@ -107,10 +110,12 @@ include-groups = true
 
 #[[matrix.linux.config]]
 #arch = 'x64'
+#platform-suffix = 'linux64'
 #include-groups = true
 
 #[[matrix.linux.config]]
 #arch = 'x64'
+#platform-suffix = 'linux64'
 #debugrec = true
 
 #[matrix.mac]
@@ -118,3 +123,4 @@ include-groups = true
 
 #[[matrix.mac.config]]
 #arch = 'x64'
+#platform-suffix = 'mac'

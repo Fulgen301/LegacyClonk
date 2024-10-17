@@ -120,17 +120,25 @@ jobs:
     name: Pack ZIP Archives
     runs-on: windows-latest
     needs: [generate-ci-config, build-content, build-system-graphics-updates]
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.generate-ci-config.outputs.matrix) }}
     env:
       OBJVERSION: ${{ needs.generate-ci-config.outputs.objversion }}
       VERSION: ${{ needs.generate-ci-config.outputs.buildversion }}
 
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+           autobuild
       - uses: actions/download-artifact@v4
         with:
-          pattern: clonk-*
+          name: clonk-${{ matrix.os }}-${{ matrix.arch }}
       - uses: actions/download-artifact@v4
         with:
-          pattern: c4group-*
+          name: c4group-${{ matrix.os }}-${{ matrix.arch }}
       - uses: actions/download-artifact@v4
         with:
           pattern: '*.c4g'
@@ -138,4 +146,18 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: content
-      - run: ls -R .
+
+      - name: Create output directory
+        run: New-Item -Path output -ItemType Directory
+
+      - name: Pack ZIP Archives
+        run: autobuild/MakeArchives.ps1 -OS ${{ matrix.os }} -Arch ${{ matrix.arch }} -PlatformSuffix ${{ matrix.platform-suffix }} -OutDir output
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lc_${{ env.VERSION }}_${{ matrix.platform-suffix }}.zip
+          path: output/lc_${{ env.VERSION }}_${{ matrix.platform-suffix }}.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lc_full_${{ env.VERSION }}_${{ matrix.platform-suffix }}.zip
+          path: output/lc_full_${{ env.VERSION }}_${{ matrix.platform-suffix }}.zip
