@@ -52,4 +52,4 @@ if ($Tag -ne "v${Env:VERSION}") {
 }
 
 butler/butler login
-butler/butler push --fix-permissions lc_full fulgen/legacyclonk:$channelName --userversion "$Env:OBJVERSION [$Env:VERSION]"
+butler/butler push --fix-permissions --dry-run lc_full fulgen/legacyclonk:$channelName --userversion "$Env:OBJVERSION [$Env:VERSION]"
