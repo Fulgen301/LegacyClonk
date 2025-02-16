@@ -20,6 +20,7 @@
 
 #include "C4ForwardDeclarations.h"
 #include <C4NameList.h>
+#include "C4Random.h"
 #include <C4IDList.h>
 
 #include <string>
@@ -35,7 +36,7 @@ public:
 public:
 	void Default();
 	void Set(int32_t std = 0, int32_t rnd = 0, int32_t min = 0, int32_t max = 100);
-	int32_t Evaluate();
+	int32_t Evaluate(C4Random &random);
 	void CompileFunc(StdCompiler *pComp);
 };
 

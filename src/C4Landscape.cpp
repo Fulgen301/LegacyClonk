@@ -63,7 +63,7 @@ C4Landscape::~C4Landscape()
 void C4Landscape::ScenarioInit()
 {
 	// Gravity
-	Gravity = FIXED100(Game.C4S.Landscape.Gravity.Evaluate()) / 5;
+	Gravity = FIXED100(Game.C4S.Landscape.Gravity.Evaluate(C4Random::Default)) / 5;
 	// Opens
 	LeftOpen = Game.C4S.Landscape.LeftOpen;
 	RightOpen = Game.C4S.Landscape.RightOpen;
@@ -521,7 +521,7 @@ CSurface8 *C4Landscape::CreateMap()
 	// Fill sfcMap
 	C4MapCreator MapCreator;
 	MapCreator.Create(surfaceMap.get(),
-		Game.C4S.Landscape, Game.TextureMap,
+		C4Random::Default, Game.C4S.Landscape, Game.TextureMap,
 		true, Game.Parameters.StartupPlayerCount);
 
 	return surfaceMap.release();
@@ -534,10 +534,18 @@ CSurface8 *C4Landscape::CreateMapS2(C4Group &ScenFile)
 
 	// create map creator
 	if (!pMapCreator)
-		pMapCreator = new C4MapCreatorS2(&Game.C4S.Landscape, &Game.TextureMap, &Game.Material, Game.Parameters.StartupPlayerCount);
+		pMapCreator = new C4MapCreatorS2(C4Random::Default, &Game.C4S.Landscape, &Game.TextureMap, &Game.Material, Game.Parameters.StartupPlayerCount);
 
-	// read file
-	pMapCreator->ReadFile(C4CFN_DynLandscape, &ScenFile);
+	// create parser and read file
+	try
+	{
+		pMapCreator->ReadFile(C4CFN_DynLandscape, &ScenFile, C4Random::Default);
+	}
+	catch (const C4MCParserErr &err)
+	{
+		err.show();
+	}
+
 	// render landscape
 	CSurface8 *sfc = pMapCreator->Render(nullptr);
 
@@ -631,7 +639,7 @@ bool C4Landscape::Init(C4Group &hGroup, bool fOverloadCurrent, bool fLoadSky, bo
 		int iWdt, iHgt;
 		sfcMap->GetSurfaceSize(iWdt, iHgt);
 		MapWidth = iWdt; MapHeight = iHgt;
-		MapZoom = Game.C4S.Landscape.MapZoom.Evaluate();
+		MapZoom = Game.C4S.Landscape.MapZoom.Evaluate(C4Random::Default);
 
 		// Calculate landscape size
 		Width = MapZoom * MapWidth;
@@ -2663,14 +2671,22 @@ bool C4Landscape::DrawMap(int32_t iX, int32_t iY, int32_t iWdt, int32_t iHgt, co
 	// If KeepMapCreator=1 we copy the existing creator to gain access to the named overlays
 	if (pMapCreator)
 	{
-		mapCreator.emplace(*pMapCreator, &FakeLS);
+		mapCreator.emplace(C4Random::Default, *pMapCreator, &FakeLS);
 	}
 	else
 	{
-		mapCreator.emplace(&FakeLS, &Game.TextureMap, &Game.Material, Game.Parameters.StartupPlayerCount);
+		mapCreator.emplace(C4Random::Default, &FakeLS, &Game.TextureMap, &Game.Material, Game.Parameters.StartupPlayerCount);
 	}
 	// read file
-	mapCreator->ReadScript(szMapDef);
+	try
+	{
+		mapCreator->ReadScript(szMapDef, C4Random::Default);
+	}
+	catch (const C4MCParserErr &err)
+	{
+		err.show();
+	}
+
 	// render map
 	CSurface8 *sfcMap = mapCreator->Render(nullptr);
 	if (!sfcMap) return false;
@@ -2695,7 +2711,7 @@ bool C4Landscape::DrawDefMap(int32_t iX, int32_t iY, int32_t iWdt, int32_t iHgt,
 	// render map
 	C4MCMap *pMap = pMapCreator->GetMap(szMapDef);
 	if (!pMap) return false;
-	pMap->SetSize(iMapWdt, iMapHgt);
+	pMap->SetSize(iMapWdt, iMapHgt, C4Random::Default);
 	CSurface8 *sfcMap = pMapCreator->Render(szMapDef);
 	if (sfcMap)
 	{

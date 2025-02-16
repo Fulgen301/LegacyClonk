@@ -3059,7 +3059,7 @@ void C4Game::InitInEarth()
 	int32_t cnt, vidnum;
 	C4ID vidlist[maxvid];
 	// Amount
-	int32_t amt = (GBackWdt * GBackHgt / 5000) * C4S.Landscape.InEarthLevel.Evaluate() / 100;
+	int32_t amt = (GBackWdt * GBackHgt / 5000) * C4S.Landscape.InEarthLevel.Evaluate(C4Random::Default) / 100;
 	// List all valid IDs from C4S
 	vidnum = ListExpandValids(C4S.Landscape.InEarth, vidlist, maxvid);
 	// Place
@@ -3074,7 +3074,7 @@ void C4Game::InitVegetation()
 	int32_t cnt, vidnum;
 	C4ID vidlist[maxvid];
 	// Amount
-	int32_t amt = (GBackWdt / 50) * C4S.Landscape.VegLevel.Evaluate() / 100;
+	int32_t amt = (GBackWdt / 50) * C4S.Landscape.VegLevel.Evaluate(C4Random::Default) / 100;
 	// Get percentage vidlist from C4S
 	vidnum = ListExpandValids(C4S.Landscape.Vegetation, vidlist, maxvid);
 	// Place vegetation

@@ -37,31 +37,32 @@ void C4Weather::Init(bool fScenario)
 {
 	if (fScenario)
 	{
+		C4Random &random{C4Random::Default};
 		// Season
-		Season = Game.C4S.Weather.StartSeason.Evaluate();
-		YearSpeed = Game.C4S.Weather.YearSpeed.Evaluate();
+		Season = Game.C4S.Weather.StartSeason.Evaluate(random);
+		YearSpeed = Game.C4S.Weather.YearSpeed.Evaluate(random);
 		// Temperature
-		Climate = 100 - Game.C4S.Weather.Climate.Evaluate() - 50;
+		Climate = 100 - Game.C4S.Weather.Climate.Evaluate(random) - 50;
 		Temperature = Climate;
 		// Wind
-		Wind = TargetWind = Game.C4S.Weather.Wind.Evaluate();
+		Wind = TargetWind = Game.C4S.Weather.Wind.Evaluate(random);
 		// Precipitation
 		if (!Game.C4S.Head.NoInitialize)
-			if (Game.C4S.Weather.Rain.Evaluate())
+			if (Game.C4S.Weather.Rain.Evaluate(random))
 				for (int32_t iClouds = (std::min)(GBackWdt / 500, 5); iClouds > 0; iClouds--)
 				{
 					volatile int iWidth = GBackWdt / 15 + Random(320);
 					volatile int iX = Random(GBackWdt);
 					LaunchCloud(iX, -1, iWidth,
-						Game.C4S.Weather.Rain.Evaluate(),
+						Game.C4S.Weather.Rain.Evaluate(random),
 						Game.C4S.Weather.Precipitation);
 				}
 		// Lightning
-		LightningLevel = Game.C4S.Weather.Lightning.Evaluate();
+		LightningLevel = Game.C4S.Weather.Lightning.Evaluate(random);
 		// Disasters
-		MeteoriteLevel = Game.C4S.Disasters.Meteorite.Evaluate();
-		VolcanoLevel = Game.C4S.Disasters.Volcano.Evaluate();
-		EarthquakeLevel = Game.C4S.Disasters.Earthquake.Evaluate();
+		MeteoriteLevel = Game.C4S.Disasters.Meteorite.Evaluate(random);
+		VolcanoLevel = Game.C4S.Disasters.Volcano.Evaluate(random);
+		EarthquakeLevel = Game.C4S.Disasters.Earthquake.Evaluate(random);
 		// gamma?
 		NoGamma = Game.C4S.Weather.NoGamma;
 	}
@@ -93,7 +94,7 @@ void C4Weather::Execute()
 	}
 	// Wind
 	if (!Tick1000)
-		TargetWind = Game.C4S.Weather.Wind.Evaluate();
+		TargetWind = Game.C4S.Weather.Wind.Evaluate(C4Random::Default);
 	if (!Tick10)
 		Wind = BoundBy<int32_t>(Wind + Sign(TargetWind - Wind),
 			Game.C4S.Weather.Wind.Min,
