@@ -630,19 +630,6 @@ C4MCMap::C4MCMap(C4MCNode *pOwner) : C4MCOverlay(pOwner) {}
 
 C4MCMap::C4MCMap(C4MCNode *pOwner, C4MCMap &rTemplate, bool fClone) : C4MCOverlay(pOwner, rTemplate, fClone) {}
 
-void C4MCMap::Default(C4Random &random)
-{
-	// inherited
-	C4MCOverlay::Default();
-	// size by landscape def
-	Wdt = MapCreator->Landscape->MapWdt.Evaluate(random);
-	Hgt = MapCreator->Landscape->MapHgt.Evaluate(random);
-	// map player extend
-	MapCreator->PlayerCount = (std::max)(MapCreator->PlayerCount, 1);
-	if (MapCreator->Landscape->MapPlayerExtend)
-		Wdt = (std::min)(Wdt * (std::min)(MapCreator->PlayerCount, C4S_MaxMapPlayerExtend), MapCreator->Landscape->MapWdt.Max);
-}
-
 bool C4MCMap::RenderTo(uint8_t *pToBuf, int32_t iPitch)
 {
 	// set current render target
@@ -688,14 +675,17 @@ C4MapCreatorS2::C4MapCreatorS2(C4Random &random, C4SLandscape *pLandscape, C4Tex
 	// me r b creator
 	MapCreator = this;
 	// store members
-	Landscape = pLandscape; TexMap = pTexMap; MatMap = pMatMap;
-	PlayerCount = iPlayerCount;
+	TexMap = pTexMap; MatMap = pMatMap;
 	// set engine field for default stuff
 	DefaultMap.MapCreator = this;
 	DefaultOverlay.MapCreator = this;
 	DefaultPoint.MapCreator = this;
-	// default to landscape settings
-	Default(random);
+
+	// force random evaluation ordering
+	const std::int32_t mapWidth{pLandscape->MapWdt.Evaluate(random)};
+	const std::int32_t mapHeight{pLandscape->MapHgt.Evaluate(random)};
+
+	Default(mapWidth, mapHeight, PlayerCount, pLandscape->MapPlayerExtend, pLandscape->MapHgt.Max);
 }
 
 C4MapCreatorS2::C4MapCreatorS2(C4Random &random, C4MapCreatorS2 &rTemplate, C4SLandscape *pLandscape) : C4MCNode(nullptr, rTemplate, true)
@@ -703,14 +693,17 @@ C4MapCreatorS2::C4MapCreatorS2(C4Random &random, C4MapCreatorS2 &rTemplate, C4SL
 	// me r b creator
 	MapCreator = this;
 	// store members
-	Landscape = pLandscape; TexMap = rTemplate.TexMap; MatMap = rTemplate.MatMap;
-	PlayerCount = rTemplate.PlayerCount;
+	TexMap = rTemplate.TexMap; MatMap = rTemplate.MatMap;
 	// set engine field for default stuff
 	DefaultMap.MapCreator = this;
 	DefaultOverlay.MapCreator = this;
 	DefaultPoint.MapCreator = this;
-	// default to landscape settings
-	Default(random);
+
+	// force random evaluation ordering
+	const std::int32_t mapWidth{pLandscape->MapWdt.Evaluate(random)};
+	const std::int32_t mapHeight{pLandscape->MapHgt.Evaluate(random)};
+
+	Default(mapWidth, mapHeight, rTemplate.PlayerCount, pLandscape->MapPlayerExtend, pLandscape->MapHgt.Max);
 }
 
 C4MapCreatorS2::~C4MapCreatorS2()
@@ -719,10 +712,21 @@ C4MapCreatorS2::~C4MapCreatorS2()
 	Clear();
 }
 
-void C4MapCreatorS2::Default(C4Random &random)
+void C4MapCreatorS2::Default(const std::int32_t mapWidth, const std::int32_t mapHeight, const std::int32_t playerCount, const bool mapPlayerExtend, const std::int32_t maxMapWidth)
 {
 	// default templates
-	DefaultMap.Default(random);
+	DefaultMap.Default();
+	// size by landscape def
+	DefaultMap.Wdt = mapWidth;
+	DefaultMap.Hgt = mapHeight;
+	// map player extend
+	PlayerCount = std::max(playerCount, 1);
+
+	if (mapPlayerExtend)
+	{
+		DefaultMap.Wdt = std::min(DefaultMap.Wdt * std::min(PlayerCount, C4S_MaxMapPlayerExtend), maxMapWidth);
+	}
+
 	DefaultOverlay.Default();
 	DefaultPoint.Default();
 	pCurrentMap = nullptr;

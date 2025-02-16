@@ -332,9 +332,6 @@ public:
 
 	C4MCNode *clone(C4MCNode *pToNode) override { return new C4MCMap(pToNode, *this, true); }
 
-protected:
-	void Default(C4Random &random); // set default values for default presets
-
 public:
 	bool RenderTo(uint8_t *pToBuf, int32_t iPitch); // render to buffer
 	void SetSize(int32_t iWdt, int32_t iHgt, C4Random &random);
@@ -354,7 +351,7 @@ public:
 	C4MapCreatorS2(C4Random &random, C4MapCreatorS2 &rTemplate, C4SLandscape *pLandscape); // construct of template
 	~C4MapCreatorS2();
 
-	void Default(C4Random &random); // set default data
+	void Default(std::int32_t mapWidth, std::int32_t mapHeight, std::int32_t playerCount, bool mapPlayerExtend, std::int32_t maxMapWidth); // set default data
 	void Clear(); // clear any data
 	void ReadFile(const char *szFilename, C4Group *pGrp, C4Random &random); // read defs of file
 	void ReadScript(const char *szScript, C4Random &random); // reads def directly from mem
@@ -366,7 +363,6 @@ public:
 	CSurface8 *Render(const char *szMapName); // create map surface
 
 protected:
-	C4SLandscape  *Landscape; // landsape presets
 	C4TextureMap  *TexMap; // texture map
 	C4MaterialMap *MatMap; // material map
 	C4MCMap DefaultMap; // default template: landscape
