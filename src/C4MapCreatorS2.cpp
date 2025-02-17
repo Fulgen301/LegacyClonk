@@ -19,25 +19,32 @@
 
 #include <C4MapCreatorS2.h>
 #include <C4Random.h>
+#include "Fixed.h"
 
-#include <C4Game.h>
-#include <C4Wrappers.h>
+#ifdef C4ENGINE
+#include "C4Game.h"
+#endif
 
 #include <cassert>
 
 // C4MCCallbackArray
 
-C4MCCallbackArray::C4MCCallbackArray(C4AulFunc *pSFunc, C4MapCreatorS2 *pMapCreator)
+C4MCCallbackArray::C4MCCallbackArray(C4MCCallbackArray::Callback callback, C4MapCreatorS2 *pMapCreator)
+	: callback{std::move(callback)}
 {
-	// store fn
-	pSF = pSFunc;
-	// zero fields
-	pMap = nullptr; pNext = nullptr;
 	// store and add in map creator
-	if (this->pMapCreator = pMapCreator)
+	if ((this->pMapCreator = pMapCreator))
 		pMapCreator->CallbackArrays.Add(this);
 	// done
 }
+
+#ifdef C4ENGINE
+C4MCCallbackArray::C4MCCallbackArray(C4AulFunc *const func, C4MapCreatorS2 *pMapCreator)
+	: C4MCCallbackArray{func ? [func](const std::int32_t x, const std::int32_t y, const std::int32_t mapZoom) { func->Exec(nullptr, {C4VInt(x), C4VInt(y), C4VInt(mapZoom)}); } : Callback{}, pMapCreator}
+{
+}
+#endif
+
 
 C4MCCallbackArray::~C4MCCallbackArray()
 {
@@ -72,19 +79,13 @@ void C4MCCallbackArray::EnablePixel(int32_t iX, int32_t iY)
 void C4MCCallbackArray::Execute(int32_t iMapZoom)
 {
 	// safety
-	if (!pSF || !pMap) return;
-	// pre-create parset
-	C4AulParSet Pars(C4VInt(0), C4VInt(0), C4VInt(iMapZoom));
+	if (!callback || !pMap) return;
 	// call all funcs
 	int32_t iIndex = iWdt * iHgt;
 	while (iIndex--)
 		if (pMap[iIndex / 8] & (1 << (iIndex % 8)))
 		{
-			// set pars
-			Pars[0] = C4VInt((iIndex % iWdt) * iMapZoom - (iMapZoom / 2));
-			Pars[1] = C4VInt((iIndex / iWdt) * iMapZoom - (iMapZoom / 2));
-			// call
-			pSF->Exec(nullptr, Pars);
+			callback((iIndex % iWdt) * iMapZoom - (iMapZoom / 2), (iIndex / iWdt) * iMapZoom - (iMapZoom / 2), iMapZoom);
 		}
 	// done
 }
@@ -129,8 +130,6 @@ C4MCNode::C4MCNode(C4MCNode *pOwner)
 {
 	// reg to owner
 	Reg2Owner(pOwner);
-	// no name
-	*Name = 0;
 }
 
 C4MCNode::C4MCNode(C4MCNode *pOwner, C4MCNode &rTemplate, bool fClone)
@@ -143,9 +142,7 @@ C4MCNode::C4MCNode(C4MCNode *pOwner, C4MCNode &rTemplate, bool fClone)
 
     // Preserve the name if pOwner is a MCN_Node, which is only the case if pOwner is a C4MapCreatorS2
     if (pOwner && pOwner->Type() == MCN_Node)
-        SCopy(rTemplate.Name, Name, C4MaxName);
-    else 
-        *Name = 0;  // Default behavior: reset the name
+		Name = rTemplate.Name;
 }
 
 C4MCNode::~C4MCNode()
@@ -196,44 +193,44 @@ C4MCOverlay *C4MCNode::OwnerOverlay()
 	return nullptr;
 }
 
-C4MCNode *C4MCNode::GetNodeByName(const char *szName)
+C4MCNode *C4MCNode::GetNodeByName(const std::string_view name)
 {
 	// search local list (backwards: last node has highest priority)
 	for (C4MCNode *pChild = ChildL; pChild; pChild = pChild->Prev)
 		// name match?
-		if (SEqual(pChild->Name, szName))
+		if (name == pChild->Name)
 			// yeah, success!
 			return pChild;
 	// search owner, if present
-	if (Owner) return Owner->GetNodeByName(szName);
+	if (Owner) return Owner->GetNodeByName(name);
 	// nothing found
 	return nullptr;
 }
 
-bool C4MCNode::SetField(C4MCParser *pParser, const char *szField, const char *szSVal, int32_t iVal, C4MCTokenType ValType)
+bool C4MCNode::SetField(C4MCParser *pParser, const std::string_view field, const std::string_view stringValue, int32_t iVal, C4MCTokenType ValType)
 {
 	// no fields in base class
 	return false;
 }
 
-int32_t C4MCNode::IntPar(C4MCParser *pParser, const char *szSVal, int32_t iVal, C4MCTokenType ValType)
+int32_t C4MCNode::IntPar(C4MCParser *pParser, const std::string_view stringValue, int32_t iVal, C4MCTokenType ValType)
 {
 	// check if int32_t
 	if (ValType == MCT_INT || ValType == MCT_PERCENT || ValType == MCT_PX)
 		return iVal;
-	throw C4MCParserErr(pParser, C4MCErr_FieldValInvalid, szSVal);
+	throw C4MCParserErr(pParser, C4MCErr_FieldValInvalid, stringValue);
 }
 
-const char *C4MCNode::StrPar(C4MCParser *pParser, const char *szSVal, int32_t iVal, C4MCTokenType ValType)
+std::string_view C4MCNode::StrPar(C4MCParser *pParser, const std::string_view stringValue, int32_t iVal, C4MCTokenType ValType)
 {
 	// check if identifier
 	if (ValType != MCT_IDTF)
-		throw C4MCParserErr(pParser, C4MCErr_FieldValInvalid, szSVal);
-	return szSVal;
+		throw C4MCParserErr(pParser, C4MCErr_FieldValInvalid, stringValue);
+	return stringValue;
 }
 
-#define IntPar IntPar(pParser, szSVal, iVal, ValType) // shortcut for checked int32_t param
-#define StrPar StrPar(pParser, szSVal, iVal, ValType) // shortcut for checked str param
+#define IntPar IntPar(pParser, stringValue, iVal, ValType) // shortcut for checked int32_t param
+#define StrPar StrPar(pParser, stringValue, iVal, ValType) // shortcut for checked str param
 
 void C4MCNode::ReEvaluate(C4Random &random)
 {
@@ -251,7 +248,7 @@ C4MCOverlay::C4MCOverlay(C4MCNode *pOwner) : C4MCNode(pOwner)
 	// zero members
 	X = Y = Wdt = Hgt = OffX = OffY = 0;
 	Material = MNone;
-	*Texture = 0;
+	Texture.clear();
 	Op = MCT_NONE;
 	MatClr = 0;
 	Algorithm = nullptr;
@@ -260,7 +257,10 @@ C4MCOverlay::C4MCOverlay(C4MCNode *pOwner) : C4MCNode(pOwner)
 	FixedSeed = Seed = 0;
 	Turbulence = Lambda = Rotate = 0;
 	Invert = LooseBounds = Group = Mask = false;
+
+#ifdef C4ENGINE
 	pEvaluateFunc = pDrawFunc = nullptr;
+#endif
 }
 
 C4MCOverlay::C4MCOverlay(C4MCNode *pOwner, C4MCOverlay &rTemplate, bool fClone) : C4MCNode(pOwner, rTemplate, fClone)
@@ -270,7 +270,7 @@ C4MCOverlay::C4MCOverlay(C4MCNode *pOwner, C4MCOverlay &rTemplate, bool fClone) 
 	RX = rTemplate.RX; RY = rTemplate.RY; RWdt = rTemplate.RWdt; RHgt = rTemplate.RHgt;
 	OffX = rTemplate.OffX; OffY = rTemplate.OffY; ROffX = rTemplate.ROffX; ROffY = rTemplate.ROffY;
 	Material = rTemplate.Material;
-	SCopy(rTemplate.Texture, Texture, C4MaxName);
+	Texture = rTemplate.Texture;
 	Algorithm = rTemplate.Algorithm;
 	Sub = rTemplate.Sub;
 	ZoomX = rTemplate.ZoomX; ZoomY = rTemplate.ZoomY;
@@ -282,6 +282,7 @@ C4MCOverlay::C4MCOverlay(C4MCNode *pOwner, C4MCOverlay &rTemplate, bool fClone) 
 	FixedSeed = rTemplate.FixedSeed;
 	pEvaluateFunc = rTemplate.pEvaluateFunc;
 	pDrawFunc = rTemplate.pDrawFunc;
+
 	// zero non-template-fields
 	if (fClone) Op = rTemplate.Op; else Op = MCT_NONE;
 }
@@ -292,7 +293,7 @@ void C4MCOverlay::Default()
 	Algorithm = GetAlgo(C4MC_DefAlgo);
 	// no mat (sky) default
 	Material = MNone;
-	*Texture = 0;
+	Texture.clear();
 	// but if mat is set, assume it sub
 	Sub = true;
 	// full size
@@ -309,14 +310,14 @@ void C4MCOverlay::Default()
 	pEvaluateFunc = pDrawFunc = nullptr;
 }
 
-bool C4MCOverlay::SetField(C4MCParser *pParser, const char *szField, const char *szSVal, int32_t iVal, C4MCTokenType ValType)
+bool C4MCOverlay::SetField(C4MCParser *pParser, const std::string_view field, const std::string_view stringValue, int32_t iVal, C4MCTokenType ValType)
 {
 	int32_t iMat; C4MCAlgorithm *pAlgo;
 	// inherited fields
-	if (C4MCNode::SetField(pParser, szField, szSVal, iVal, ValType)) return true;
+	if (C4MCNode::SetField(pParser, field, stringValue, iVal, ValType)) return true;
 	// local fields
 	for (C4MCNodeAttr *pAttr = &C4MCOvrlMap[0]; *pAttr->Name; pAttr++)
-		if (SEqual(szField, pAttr->Name))
+		if (field == pAttr->Name)
 		{
 			// store according to field type
 			switch (pAttr->Type)
@@ -337,7 +338,11 @@ bool C4MCOverlay::SetField(C4MCParser *pParser, const char *szField, const char 
 			}
 			case C4MCV_Material:
 				// get material by string
-				iMat = MapCreator->MatMap->Get(StrPar);
+#ifdef C4ENGINE
+				iMat = MapCreator->MatMap->Get(StrPar.data());
+#else
+				iMat = MapCreator->GetMaterial(StrPar.data());
+#endif
 				// check validity
 				if (iMat == MNone) throw C4MCParserErr(pParser, C4MCErr_MatNotFound, StrPar);
 				// store
@@ -345,10 +350,14 @@ bool C4MCOverlay::SetField(C4MCParser *pParser, const char *szField, const char 
 				break;
 			case C4MCV_Texture:
 				// check validity
-				if (!MapCreator->TexMap->CheckTexture(StrPar))
+#ifdef C4ENGINE
+				if (!MapCreator->TexMap->CheckTexture(StrPar.data()))
+#else
+				if (!MapCreator->CheckTexture(StrPar.data()))
+#endif
 					throw C4MCParserErr(pParser, C4MCErr_TexNotFound, StrPar);
 				// store
-				SCopy(StrPar, this->*(pAttr->texture), C4MaxName);
+				this->*(pAttr->texture) = std::string_view{StrPar}.substr(0, C4MaxName);
 				break;
 			case C4MCV_Algorithm:
 				// get algo
@@ -368,11 +377,17 @@ bool C4MCOverlay::SetField(C4MCParser *pParser, const char *szField, const char 
 				break;
 			case C4MCV_ScriptFunc:
 			{
+#ifdef C4ENGINE
 				// get script func of main script
-				C4AulFunc *pSFunc = Game.Script.GetSFunc(StrPar, AA_PROTECTED);
+				C4AulFunc *pSFunc = Game.Script.GetSFunc(StrPar.data(), AA_PROTECTED);
 				if (!pSFunc) throw C4MCParserErr(pParser, C4MCErr_SFuncNotFound, StrPar);
 				// add to main
 				this->*(pAttr->scriptFunc) = new C4MCCallbackArray(pSFunc, MapCreator);
+#else
+				auto callback = MapCreator->GetEvaluationCallback(StrPar.data());
+				if (!callback) throw C4MCParserErr{pParser, C4MCErr_SFuncNotFound, StrPar};
+				this->*(pAttr->scriptFunc) = new C4MCCallbackArray{std::move(callback), MapCreator};
+#endif
 				break;
 			}
 			case C4MCV_None:
@@ -386,12 +401,12 @@ bool C4MCOverlay::SetField(C4MCParser *pParser, const char *szField, const char 
 	return false;
 }
 
-C4MCAlgorithm *C4MCOverlay::GetAlgo(const char *szName)
+C4MCAlgorithm *C4MCOverlay::GetAlgo(const std::string_view name)
 {
 	// search map
 	for (C4MCAlgorithm *pAlgo = &C4MCAlgoMap[0]; pAlgo->Function; pAlgo++)
 		// check name
-		if (SEqual(pAlgo->Identifier, szName))
+		if (name == pAlgo->Identifier)
 			// success!
 			return pAlgo;
 	// nothing found
@@ -403,13 +418,21 @@ void C4MCOverlay::Evaluate(C4Random &random)
 	// inherited
 	C4MCNode::Evaluate(random);
 	// get mat color
+#ifdef C4ENGINE
 	if (Inside<int32_t>(Material, 0, MapCreator->MatMap->Num - 1))
 	{
-		MatClr = MapCreator->TexMap->GetIndexMatTex(MapCreator->MatMap->Map[Material].Name, *Texture ? Texture : nullptr);
+		MatClr = MapCreator->TexMap->GetIndexMatTex(MapCreator->MatMap->Map[Material].Name, Texture.empty() ? nullptr : Texture.c_str());
 		if (Sub) MatClr += 128;
 	}
 	else
 		MatClr = 0;
+#else
+	MatClr = MapCreator->GetIndexMatTex(Material, Texture.c_str());
+	if (MatClr && Sub)
+	{
+		MatClr += 128;
+	}
+#endif
 	// calc size
 	if (Owner)
 	{
@@ -589,16 +612,16 @@ void C4MCPoint::Default()
 	X = Y = 0;
 }
 
-bool C4MCPoint::SetField(C4MCParser *pParser, const char *szField, const char *szSVal, int32_t iVal, C4MCTokenType ValType)
+bool C4MCPoint::SetField(C4MCParser *pParser, const std::string_view field, const std::string_view stringValue, int32_t iVal, C4MCTokenType ValType)
 {
 	// only explicit %/px
 	if (ValType == MCT_INT) return false;
-	if (SEqual(szField, "x"))
+	if (field == "x")
 	{
 		RX.Set(IntPar, ValType == MCT_PERCENT);
 		return true;
 	}
-	else if (SEqual(szField, "y"))
+	else if (field == "y")
 	{
 		RY.Set(IntPar, ValType == MCT_PERCENT);
 		return true;
@@ -669,6 +692,8 @@ void C4MCMap::SetSize(int32_t iWdt, int32_t iHgt, C4Random &random)
 
 // map creator
 
+#ifdef C4ENGINE
+
 C4MapCreatorS2::C4MapCreatorS2(C4Random &random, C4SLandscape *pLandscape, C4TextureMap *pTexMap, C4MaterialMap *pMatMap, int iPlayerCount) : C4MCNode(nullptr)
 {
 	// me r b creator
@@ -705,6 +730,28 @@ C4MapCreatorS2::C4MapCreatorS2(C4Random &random, C4MapCreatorS2 &rTemplate, C4SL
 	Default(mapWidth, mapHeight, rTemplate.PlayerCount, pLandscape->MapPlayerExtend, pLandscape->MapHgt.Max);
 }
 
+#else
+
+C4MapCreatorS2::C4MapCreatorS2(CreatorArgs args)
+	: CheckTexture{std::move(args.CheckTexture)},
+	  GetIndexMatTex{std::move(args.GetIndexMatTex)},
+	  GetMaterial{std::move(args.GetMaterial)},
+	  GetEvaluationCallback{std::move(args.GetEvaluationCallback)},
+	  GetScriptAlgoCallback{std::move(args.GetScriptAlgoCallback)}
+{
+	// me r b creator
+	MapCreator = this;
+	// store members
+	// set engine field for default stuff
+	DefaultMap.MapCreator = this;
+	DefaultOverlay.MapCreator = this;
+	DefaultPoint.MapCreator = this;
+
+	Default(args.MapWidth, args.MapHeight, args.PlayerCount, args.MapPlayerExtend, args.MaxMapWidth);
+}
+
+#endif
+
 C4MapCreatorS2::~C4MapCreatorS2()
 {
 	// clear fields
@@ -739,11 +786,15 @@ void C4MapCreatorS2::Clear()
 	CallbackArrays.Clear();
 }
 
+#ifdef C4ENGINE
+
 void C4MapCreatorS2::ReadFile(const char *szFilename, C4Group *pGrp, C4Random &random)
 {
 	// create parser and read file
 	C4MCParser(this, random).ParseFile(szFilename, pGrp);
 }
+
+#endif
 
 void C4MapCreatorS2::ReadScript(const char *szScript, C4Random &random)
 {
@@ -775,17 +826,22 @@ C4MCMap *C4MapCreatorS2::GetMap(const char *szMapName)
 	return pMap;
 }
 
+#ifdef C4ENGINE
 CSurface8 *C4MapCreatorS2::Render(const char *szMapName)
+#else
+std::pair<std::unique_ptr<std::uint8_t[]>, std::int32_t> C4MapCreatorS2::Render(const char *szMapName, const std::function<std::pair<std::uint8_t *, std::int32_t>(std::int32_t, std::int32_t)> &allocator)
+#endif
 {
 	// get map
 	C4MCMap *pMap = GetMap(szMapName);
-	if (!pMap) return nullptr;
+	if (!pMap) return {};
 
 	// get size
 	int32_t sfcWdt, sfcHgt;
 	sfcWdt = pMap->Wdt; sfcHgt = pMap->Hgt;
-	if (!sfcWdt || !sfcHgt) return nullptr;
+	if (!sfcWdt || !sfcHgt) return {};
 
+#ifdef C4ENGINE
 	// create surface
 	CSurface8 *sfc = new CSurface8(sfcWdt, sfcHgt);
 
@@ -794,12 +850,23 @@ CSurface8 *C4MapCreatorS2::Render(const char *szMapName)
 
 	// success
 	return sfc;
+#else
+	auto [bits, pitch] = allocator(sfcWdt, sfcHgt);
+	if (bits)
+	{
+		pMap->RenderTo(bits, pitch);
+	}
+
+	return {std::unique_ptr<std::uint8_t[]>{bits}, pitch};
+#endif
 }
 
 C4MCParserErr::C4MCParserErr(C4MCParser *pParser, const std::string_view msg)
-	: Msg{std::format("{}: {} ({})", +pParser->Filename, msg, pParser->Code ? SGetLine(pParser->Code, pParser->CPos) : 0)}
+	: Msg{std::format("{}: {} ({})", pParser->Filename, msg, pParser->Code ? SGetLine(pParser->Code, pParser->CPos) : 0)}
 {
 }
+
+#ifdef C4ENGINE
 
 void C4MCParserErr::show() const
 {
@@ -807,13 +874,15 @@ void C4MCParserErr::show() const
 	LogNTr(spdlog::level::err, Msg);
 }
 
+#endif
+
 // parser
 
 C4MCParser::C4MCParser(C4MapCreatorS2 *pMapCreator, C4Random &random)
 	: MapCreator{pMapCreator}, random{random}
 {
 	// reset some fields
-	Code = nullptr; CPos = nullptr; *Filename = 0;
+	Code = nullptr; CPos = nullptr;
 }
 
 C4MCParser::~C4MCParser()
@@ -827,7 +896,7 @@ void C4MCParser::Clear()
 	// clear code if present
 	delete[] Code; Code = nullptr; CPos = nullptr;
 	// reset filename
-	*Filename = 0;
+	Filename.clear();
 }
 
 bool C4MCParser::AdvanceSpaces()
@@ -874,7 +943,7 @@ bool C4MCParser::GetNextToken()
 	if (!AdvanceSpaces()) { CurrToken = MCT_EOF; return false; }
 	// store offset
 	const char *CPos0 = CPos;
-	int32_t Len = 0;
+	std::size_t len{0};
 	// token get state
 	enum TokenGetState
 	{
@@ -920,8 +989,7 @@ bool C4MCParser::GetNextToken()
 			if (((C < '0') || (C > '9')) && ((C < 'a') || (C > 'z')) && ((C < 'A') || (C > 'Z')) && (C != '_'))
 			{
 				// return ident/directive
-				Len = std::min<int32_t>(Len, C4MaxName);
-				SCopy(CPos0, CurrTokenIdtf, Len);
+				CurrTokenIdtf = std::string_view{CPos0, len}.substr(0, C4MaxName);
 				if (State == TGS_Ident) CurrToken = MCT_IDTF; else CurrToken = MCT_DIR;
 				return true;
 			}
@@ -931,10 +999,9 @@ bool C4MCParser::GetNextToken()
 			if ((C < '0') || (C > '9'))
 			{
 				// return integer
-				Len = std::min<int32_t>(Len, C4MaxName);
 				CurrToken = MCT_INT;
 				// check for "-"
-				if (Len == 1 && *CPos0 == '-')
+				if (len == 1 && *CPos0 == '-')
 				{
 					CurrToken = MCT_RANGE;
 					return true;
@@ -947,31 +1014,16 @@ bool C4MCParser::GetNextToken()
 					if ('x' == *CPos) ++CPos;
 					CurrToken = MCT_PX;
 				}
-				SCopy(CPos0, CurrTokenIdtf, Len);
+				CurrTokenIdtf = std::string_view{CPos0, len}.substr(0, C4MaxName);
 				// it's not, so return the int32_t
-				sscanf(CurrTokenIdtf, "%d", &CurrTokenVal);
+				std::sscanf(CurrTokenIdtf.c_str(), "%d", &CurrTokenVal);
 				return true;
 			}
 			break;
 		}
 		// next char
-		CPos++; Len++;
+		CPos++; len++;
 	}
-}
-
-static void PrintNodeTree(C4MCNode *pNode, int depth)
-{
-	for (int i = 0; i < depth; ++i)
-		printf("  ");
-	switch (pNode->Type())
-	{
-	case MCN_Node: printf("Node %s\n", pNode->Name); break;
-	case MCN_Overlay: printf("Overlay %s\n", pNode->Name); break;
-	case MCN_Point: printf("Point %s\n", pNode->Name); break;
-	case MCN_Map: printf("Map %s\n", pNode->Name); break;
-	}
-	for (C4MCNode *pChild = pNode->Child0; pChild; pChild = pChild->Next)
-		PrintNodeTree(pChild, depth + 1);
 }
 
 void C4MCParser::ParseTo(C4MCNode *pToNode)
@@ -979,7 +1031,7 @@ void C4MCParser::ParseTo(C4MCNode *pToNode)
 	C4MCNode *pNewNode = nullptr; // new node
 	bool Done = false; // finished?
 	C4MCNodeType LastOperand; // last first operand of operator
-	char FieldName[C4MaxName]; // buffer for current field to access
+	std::string fieldName; // buffer for current field to access
 	C4MCNode *pCpyNode; // node to copy from
 	// current state
 	enum ParseState
@@ -1008,17 +1060,17 @@ void C4MCParser::ParseTo(C4MCNode *pToNode)
 				if (!pToNode->GlobalScope())
 					throw C4MCParserErr(this, C4MCErr_NoDirGlobal);
 				// no directives so far
-				throw C4MCParserErr(this, C4MCErr_UnknownDir, +CurrTokenIdtf);
+				throw C4MCParserErr(this, C4MCErr_UnknownDir, CurrTokenIdtf);
 				break;
 			case MCT_IDTF:
 				// identifier: check keywords
-				if (SEqual(CurrTokenIdtf, C4MC_Overlay))
+				if (CurrTokenIdtf == C4MC_Overlay)
 				{
 					// overlay: create overlay node, using default template
 					pNewNode = new C4MCOverlay(pToNode, MapCreator->DefaultOverlay, false);
 					State = PS_KEYWD1;
 				}
-				else if (SEqual(CurrTokenIdtf, C4MC_Point) && !pToNode->GetNodeByName(CurrTokenIdtf))
+				else if ((CurrTokenIdtf == C4MC_Point) && !pToNode->GetNodeByName(CurrTokenIdtf))
 				{
 					// only in overlays
 					if (!pToNode->Type() == MCN_Overlay)
@@ -1027,7 +1079,7 @@ void C4MCParser::ParseTo(C4MCNode *pToNode)
 					pNewNode = new C4MCPoint(pToNode, MapCreator->DefaultPoint, false);
 					State = PS_KEYWD1;
 				}
-				else if (SEqual(CurrTokenIdtf, C4MC_Map))
+				else if (CurrTokenIdtf == C4MC_Map)
 				{
 					// map: check top level
 					if (!pToNode->GlobalScope())
@@ -1063,7 +1115,7 @@ void C4MCParser::ParseTo(C4MCNode *pToNode)
 			if (CurrToken == MCT_IDTF)
 			{
 				// name the current node
-				SCopy(CurrTokenIdtf, pNewNode->Name, C4MaxName);
+				pNewNode->Name = CurrTokenIdtf.substr(0, C4MaxName);
 				State = PS_KEYWD1N;
 				break;
 			}
@@ -1095,7 +1147,7 @@ void C4MCParser::ParseTo(C4MCNode *pToNode)
 				if (State == PS_GOTOPIDTF)
 					throw C4MCParserErr(this, C4MCErr_Obj2Exp);
 				// store field name
-				SCopy(CurrTokenIdtf, FieldName, C4MaxName);
+				fieldName = CurrTokenIdtf;
 				// update state to accept value
 				State = PS_SETFIELD;
 				break;
@@ -1105,11 +1157,11 @@ void C4MCParser::ParseTo(C4MCNode *pToNode)
 				// so it's a node copy
 				// local scope only
 				if (pToNode->GlobalScope())
-					throw C4MCParserErr(this, C4MCErr_ReinstNoGlobal, +CurrTokenIdtf);
+					throw C4MCParserErr(this, C4MCErr_ReinstNoGlobal, CurrTokenIdtf);
 				// get the node
 				pCpyNode = pToNode->GetNodeByName(CurrTokenIdtf);
 				if (!pCpyNode)
-					throw C4MCParserErr(this, C4MCErr_UnknownObj, +CurrTokenIdtf);
+					throw C4MCParserErr(this, C4MCErr_UnknownObj, CurrTokenIdtf);
 				// create the copy
 				switch (pCpyNode->Type())
 				{
@@ -1120,11 +1172,11 @@ void C4MCParser::ParseTo(C4MCNode *pToNode)
 				case MCN_Map:
 					// maps not allowed
 					if (pCpyNode->Type() == MCN_Map)
-						throw C4MCParserErr(this, C4MCErr_MapNoGlobal, +CurrTokenIdtf);
+						throw C4MCParserErr(this, C4MCErr_MapNoGlobal, CurrTokenIdtf);
 					break;
 				default:
 					// huh?
-					throw C4MCParserErr(this, C4MCErr_ReinstUnknown, +CurrTokenIdtf);
+					throw C4MCParserErr(this, C4MCErr_ReinstUnknown, CurrTokenIdtf);
 					break;
 				}
 				// check type for operators
@@ -1184,7 +1236,7 @@ void C4MCParser::ParseTo(C4MCNode *pToNode)
 			pNewNode = nullptr;
 			break;
 		case PS_SETFIELD:
-			ParseValue(pToNode, FieldName);
+			ParseValue(pToNode, fieldName);
 			// reset state
 			State = PS_NONE;
 			break;
@@ -1202,7 +1254,7 @@ void C4MCParser::ParseTo(C4MCNode *pToNode)
 	}
 }
 
-void C4MCParser::ParseValue(C4MCNode *pToNode, const char *szFieldName)
+void C4MCParser::ParseValue(C4MCNode *pToNode, const std::string_view fieldName)
 {
 	int32_t Value;
 	C4MCTokenType Type;
@@ -1211,9 +1263,9 @@ void C4MCParser::ParseValue(C4MCNode *pToNode, const char *szFieldName)
 	case MCT_IDTF:
 	{
 		// set field
-		if (!pToNode->SetField(this, szFieldName, CurrTokenIdtf, 0, CurrToken))
+		if (!pToNode->SetField(this, fieldName, CurrTokenIdtf, 0, CurrToken))
 			// field not found
-			throw C4MCParserErr(this, C4MCErr_Field404, szFieldName);
+			throw C4MCParserErr(this, C4MCErr_Field404, fieldName);
 		if (!GetNextToken())
 			throw C4MCParserErr(this, C4MCErr_EOF);
 		break;
@@ -1237,19 +1289,19 @@ void C4MCParser::ParseValue(C4MCNode *pToNode, const char *szFieldName)
 				Value += random.Random(CurrTokenVal - Value);
 			}
 			else
-				throw C4MCParserErr(this, C4MCErr_FieldConstExp, +CurrTokenIdtf);
+				throw C4MCParserErr(this, C4MCErr_FieldConstExp, CurrTokenIdtf);
 			Type = CurrToken;
 			if (!GetNextToken())
 				throw C4MCParserErr(this, C4MCErr_EOF);
 		}
-		if (!pToNode->SetField(this, szFieldName, CurrTokenIdtf, Value, Type))
+		if (!pToNode->SetField(this, fieldName, CurrTokenIdtf, Value, Type))
 			// field not found
-			throw C4MCParserErr(this, C4MCErr_Field404, szFieldName);
+			throw C4MCParserErr(this, C4MCErr_Field404, fieldName);
 		break;
 	}
 	default:
 	{
-		throw C4MCParserErr(this, C4MCErr_FieldConstExp, +CurrTokenIdtf);
+		throw C4MCParserErr(this, C4MCErr_FieldConstExp, CurrTokenIdtf);
 	}
 	}
 
@@ -1258,6 +1310,8 @@ void C4MCParser::ParseValue(C4MCNode *pToNode, const char *szFieldName)
 		throw C4MCParserErr(this, C4MCErr_SColonExp);
 }
 
+#ifdef C4ENGINE
+
 void C4MCParser::ParseFile(const char *szFilename, C4Group *pGrp)
 {
 	size_t iSize; // file size
@@ -1265,7 +1319,7 @@ void C4MCParser::ParseFile(const char *szFilename, C4Group *pGrp)
 	// clear any old data
 	Clear();
 	// store filename
-	SCopy(szFilename, Filename, C4MaxName);
+	Filename = szFilename;
 	// check group
 	if (!pGrp) throw C4MCParserErr(this, C4MCErr_NoGroup);
 	// get file
@@ -1282,11 +1336,12 @@ void C4MCParser::ParseFile(const char *szFilename, C4Group *pGrp)
 	// parse it
 	CPos = Code;
 	ParseTo(MapCreator);
-	if (0) PrintNodeTree(MapCreator, 0);
 	// free code
 	// on errors, this will be done be destructor
 	Clear();
 }
+
+#endif
 
 void C4MCParser::Parse(const char *szScript)
 {
@@ -1295,7 +1350,6 @@ void C4MCParser::Parse(const char *szScript)
 	// parse it
 	CPos = szScript;
 	ParseTo(MapCreator);
-	if (0) PrintNodeTree(MapCreator, 0);
 	// free code
 	// on errors, this will be done be destructor
 	Clear();
@@ -1428,6 +1482,7 @@ bool AlgoGradient(C4MCOverlay *pOvrl, int32_t iX, int32_t iY)
 
 bool AlgoScript(C4MCOverlay *pOvrl, int32_t iX, int32_t iY)
 {
+#ifdef C4ENGINE
 	// get script function
 	C4AulFunc *pFunc = Game.Script.GetSFunc((std::string{"ScriptAlgo"} + pOvrl->Name).c_str());
 	// failsafe
@@ -1443,6 +1498,12 @@ bool AlgoScript(C4MCOverlay *pOvrl, int32_t iX, int32_t iY)
 	{
 		return false;
 	}
+#else
+	auto callback = pOvrl->MapCreator->GetScriptAlgoCallback((std::string{"ScriptAlgo"} + pOvrl->Name).c_str());
+	if (!callback) return false;
+
+	return callback(iX, iY, pOvrl->Alpha.Evaluate(C4MC_SizeRes), pOvrl->Beta.Evaluate(C4MC_SizeRes));
+#endif
 }
 
 bool AlgoRndAll(C4MCOverlay *pOvrl, int32_t iX, int32_t iY)

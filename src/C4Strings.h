@@ -97,7 +97,18 @@ void SCapitalize(char *szString);
 void SWordWrap(char *szText, char cSpace, char cSepa, size_t iMaxLine);
 int SClearFrontBack(char *szString, char cClear = ' ');
 
-int SGetLine(const char *szText, const char *cpPosition);
+inline int SGetLine(const char *szText, const char *cpPosition)
+{
+	if (!szText || !cpPosition) return 0;
+	int iLines = 0;
+	while (*szText && (szText < cpPosition))
+	{
+		if (*szText == 0x0A) iLines++;
+		szText++;
+	}
+	return iLines;
+}
+
 int SLineGetCharacters(const char *szText, const char *cpPosition);
 
 // case sensitive wildcard match with some extra functionality

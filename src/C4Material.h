@@ -202,5 +202,3 @@ const int32_t C4M_Flat = 0,
               C4M_SemiSolid  = 25,
               C4M_Liquid     = 25,
               C4M_Background = 0;
-
-const int32_t MNone = -1;

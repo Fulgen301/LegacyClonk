@@ -377,18 +377,6 @@ void SNewSegment(char *szStr, const char *szSepa)
 	if (szStr[0]) SAppend(szSepa, szStr);
 }
 
-int SGetLine(const char *szText, const char *cpPosition)
-{
-	if (!szText || !cpPosition) return 0;
-	int iLines = 0;
-	while (*szText && (szText < cpPosition))
-	{
-		if (*szText == 0x0A) iLines++;
-		szText++;
-	}
-	return iLines;
-}
-
 int SLineGetCharacters(const char *szText, const char *cpPosition)
 {
 	if (!szText || !cpPosition) return 0;

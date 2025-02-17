@@ -19,11 +19,19 @@
 
 #pragma once
 
+#include "C4Constants.h"
 #include "C4ForwardDeclarations.h"
+
+#ifdef C4ENGINE
 #include <C4Group.h>
 #include <C4Scenario.h>
+#endif
 
 #include <format>
+
+#ifndef C4ENGINE
+#include <functional>
+#endif
 
 #define C4MC_SizeRes 100 // positions in percent
 #define C4MC_ZoomRes 100 // zoom resolution (-100 to +99)
@@ -106,19 +114,28 @@ enum C4MCTokenType
 	MCT_EOF      // end of file
 };
 
+
 // a callback array
-// contains a script func, and a map to call the func for
+// contains a func, and a map to call the func for
 class C4MCCallbackArray
 {
 public:
+	using Callback = std::function<void(std::int32_t, std::int32_t, std::int32_t)>;
+
+public:
+	C4MCCallbackArray(Callback callback, C4MapCreatorS2 *pMapCreator);
+
+#ifdef C4ENGINE
 	C4MCCallbackArray(C4AulFunc *pSFunc, C4MapCreatorS2 *pMapCreator);
+#endif
+
 	~C4MCCallbackArray();
 
 protected:
-	C4MapCreatorS2 *pMapCreator; // map creator class to query current map of
-	uint8_t *pMap; // bitmap whether or not to call the function for a map pixel
+	C4MapCreatorS2 *pMapCreator{nullptr}; // map creator class to query current map of
+	uint8_t *pMap{nullptr}; // bitmap whether or not to call the function for a map pixel
 	int32_t iWdt, iHgt; // size of the bitmap, when created
-	C4AulFunc *pSF; // script func to be called
+	Callback callback; // func to be called
 
 	C4MCCallbackArray *pNext; // next array in linked list
 
@@ -152,7 +169,7 @@ class C4MCNode
 public:
 	C4MCNode *Owner, *Child0, *ChildL, *Prev, *Next; // tree structure
 	C4MapCreatorS2 *MapCreator; // owning map creator
-	char Name[C4MaxName]; // name, if named
+	std::string Name; // name, if named
 
 public:
 	C4MCNode(C4MCNode *pOwner = nullptr);
@@ -167,11 +184,11 @@ public:
 protected:
 	virtual bool GlobalScope() { return false; } // whether node is a global scope
 	virtual bool SetOp(C4MCTokenType eOp) { return false; } // set following operator
-	C4MCNode *GetNodeByName(const char *szName); // search node by name
+	C4MCNode *GetNodeByName(std::string_view name); // search node by name
 
-	virtual bool SetField(C4MCParser *pParser, const char *szField, const char *szSVal, int32_t iVal, C4MCTokenType ValType); // set field
-	int32_t IntPar(C4MCParser *pParser, const char *szSVal, int32_t iVal, C4MCTokenType ValType); // ensure par is int32_t
-	const char *StrPar(C4MCParser *pParser, const char *szSVal, int32_t iVal, C4MCTokenType ValType); // ensure par is string
+	virtual bool SetField(C4MCParser *pParser, std::string_view field, std::string_view stringValue, int32_t iVal, C4MCTokenType ValType); // set field
+	int32_t IntPar(C4MCParser *pParser, std::string_view stringValue, int32_t iVal, C4MCTokenType ValType); // ensure par is int32_t
+	std::string_view StrPar(C4MCParser *pParser, std::string_view stringValue, int32_t iVal, C4MCTokenType ValType); // ensure par is string
 
 	virtual void Evaluate([[maybe_unused]] C4Random &random) {} // called when all fields are initialized
 	void ReEvaluate(C4Random &random); // evaluate everything again
@@ -227,7 +244,7 @@ struct C4MCNodeAttr
 	{
 		int32_t C4MCOverlay:: *integer;
 		C4MCNode::int_bool C4MCOverlay:: *intBool;
-		char (C4MCOverlay:: *texture)[C4M_MaxName + 1];
+		std::string C4MCOverlay:: *texture;
 		C4MCAlgorithm * C4MCOverlay:: *algorithm;
 		bool C4MCOverlay:: *boolean;
 		C4MCCallbackArray * C4MCOverlay:: *scriptFunc;
@@ -236,7 +253,7 @@ struct C4MCNodeAttr
 	C4MCNodeAttr() : Name(""), Type(C4MCV_None), integer(nullptr) {}
 	C4MCNodeAttr(const char *Name, int32_t C4MCOverlay:: *integer, C4MCValueType Type = C4MCV_Integer) : Name(Name), Type(Type), integer(integer) {}
 	C4MCNodeAttr(const char *Name, C4MCNode::int_bool C4MCOverlay:: *intBool, C4MCValueType Type = C4MCV_Percent) : Name(Name), Type(Type), intBool(intBool) {}
-	C4MCNodeAttr(const char *Name, char (C4MCOverlay:: *texture)[C4M_MaxName + 1]) : Name(Name), Type(C4MCV_Texture), texture(texture) {}
+	C4MCNodeAttr(const char *Name, std::string C4MCOverlay:: *texture) : Name(Name), Type(C4MCV_Texture), texture(texture) {}
 	C4MCNodeAttr(const char *Name, C4MCAlgorithm * C4MCOverlay:: *algorithm) : Name(Name), Type(C4MCV_Algorithm), algorithm(algorithm) {}
 	C4MCNodeAttr(const char *Name, bool C4MCOverlay:: *boolean) : Name(Name), Type(C4MCV_Boolean), boolean(boolean) {}
 	C4MCNodeAttr(const char *Name, C4MCCallbackArray * C4MCOverlay:: *scriptFunc) : Name(Name), Type(C4MCV_ScriptFunc), scriptFunc(scriptFunc) {}
@@ -262,7 +279,7 @@ public:
 	int_bool RX, RY, RWdt, RHgt, ROffX, ROffY; // extends/offset relatively to owner
 	int32_t Material; // material index
 	bool Sub; // tunnel bg?
-	char Texture[C4M_MaxName + 1]; // texture name
+	std::string Texture; // texture name
 	uint8_t MatClr; // resolved mat-tex color
 	C4MCTokenType Op; // following operator
 	C4MCAlgorithm *Algorithm; // algorithm to calc whether filled or not
@@ -270,14 +287,15 @@ public:
 	int_bool Alpha, Beta; // extra params
 	int32_t ZoomX, ZoomY; // zoom factor for algorithm
 	bool Invert, LooseBounds, Group, Mask; // extra algo behaviour
+
 	C4MCCallbackArray *pEvaluateFunc; // function called for nodes being evaluated and fulfilled
 	C4MCCallbackArray *pDrawFunc; // function called when this node is drawn - pass drawcolor as first param, return color to be actually used
 
 	bool SetOp(C4MCTokenType eOp) override { Op = eOp; return true; } // set following operator
 
-	C4MCAlgorithm *GetAlgo(const char *szName);
+	C4MCAlgorithm *GetAlgo(std::string_view name);
 
-	bool SetField(C4MCParser *pParser, const char *szField, const char *szSVal, int32_t iVal, C4MCTokenType ValType) override; // set field
+	bool SetField(C4MCParser *pParser, std::string_view field, std::string_view stringValue, int32_t iVal, C4MCTokenType ValType) override; // set field
 
 	void Evaluate(C4Random &random) override; // called when all fields are initialized
 
@@ -313,7 +331,7 @@ public:
 	int_bool RX, RY;
 
 	virtual void Evaluate(C4Random &random) override; // called when all fields are initialized
-	bool SetField(C4MCParser *pParser, const char *szField, const char *szSVal, int32_t iVal, C4MCTokenType ValType) override; // set field
+	bool SetField(C4MCParser *pParser, std::string_view field, std::string_view stringValue, int32_t iVal, C4MCTokenType ValType) override; // set field
 
 public:
 	C4MCNodeType Type() override { return MCN_Point; } // get node type
@@ -345,30 +363,67 @@ public:
 // main map creator class
 class C4MapCreatorS2 : public C4MCNode
 {
+#ifndef C4ENGINE
 public:
+	struct CreatorArgs
+	{
+		std::int32_t MapWidth;
+		std::int32_t MapHeight;
+		std::int32_t PlayerCount;
+		bool MapPlayerExtend;
+		std::int32_t MaxMapWidth;
+
+		std::function<bool(const char *)> CheckTexture;
+		std::function<std::uint8_t(std::int32_t, const char *)> GetIndexMatTex;
+		std::function<std::uint8_t(const char *)> GetMaterial;
+		std::function<C4MCCallbackArray::Callback(const char *)> GetEvaluationCallback;
+		std::function<std::function<bool(std::int32_t, std::int32_t, std::int32_t, std::int32_t)>(const char *)> GetScriptAlgoCallback;
+	};
+#endif
+
+public:
+#ifdef C4ENGINE
 	C4MapCreatorS2(C4Random &random, C4SLandscape *pLandscape, C4TextureMap *pTexMap, C4MaterialMap *pMatMap, int iPlayerCount);
 	C4MapCreatorS2(C4Random &random, C4MapCreatorS2 &rTemplate, C4SLandscape *pLandscape); // construct of template
+#else
+	C4MapCreatorS2(CreatorArgs args);
+#endif
 	~C4MapCreatorS2();
 
 	void Default(std::int32_t mapWidth, std::int32_t mapHeight, std::int32_t playerCount, bool mapPlayerExtend, std::int32_t maxMapWidth); // set default data
 	void Clear(); // clear any data
+#ifdef C4ENGINE
 	void ReadFile(const char *szFilename, C4Group *pGrp, C4Random &random); // read defs of file
+#endif
 	void ReadScript(const char *szScript, C4Random &random); // reads def directly from mem
 
 public:
 	C4MCMap *GetMap(const char *szMapName); // get map by name
 
 public:
-	CSurface8 *Render(const char *szMapName); // create map surface
+#ifdef C4ENGINE
+	CSurface8 *Render(const char *szMapName); // create map surface;
+#else
+	std::pair<std::unique_ptr<std::uint8_t[]>, std::int32_t> Render(const char *szMapName, const std::function<std::pair<std::uint8_t *, std::int32_t>(std::int32_t, std::int32_t)> &allocator);
+#endif
 
 protected:
+#ifdef C4ENGINE
 	C4TextureMap  *TexMap; // texture map
 	C4MaterialMap *MatMap; // material map
+#else
+	std::function<bool(const char *)> CheckTexture;
+	std::function<std::uint8_t(std::int32_t, const char *)> GetIndexMatTex;
+	std::function<std::uint8_t(const char *)> GetMaterial;
+	std::function<C4MCCallbackArray::Callback(const char *)> GetEvaluationCallback;
+	std::function<std::function<bool(std::int32_t, std::int32_t, std::int32_t, std::int32_t)>(const char *)> GetScriptAlgoCallback;
+#endif
 	C4MCMap DefaultMap; // default template: landscape
 	C4MCOverlay DefaultOverlay; // default template: overlay
 	C4MCPoint DefaultPoint; // default template: point
 	C4MCMap *pCurrentMap; // map currently rendered
 	C4MCCallbackArrayList CallbackArrays; // list of callback arrays
+
 	int PlayerCount; // player count for MapPlayerExtend
 
 	bool GlobalScope() override { return true; } // it's the global node
@@ -380,6 +435,8 @@ public:
 	friend class C4MCMap;
 	friend class C4MCParser;
 	friend class C4MCCallbackArray;
+
+	friend bool AlgoScript(C4MCOverlay *, int32_t, int32_t);
 };
 
 // file parser for map creator
@@ -398,7 +455,9 @@ public:
 	{
 	}
 
+#ifdef C4ENGINE
 	void show() const; // log error
+#endif
 };
 
 // the parser
@@ -410,14 +469,14 @@ private:
 	char *Code; // loaded code
 	const char *CPos; // current parser pos in code
 	C4MCTokenType CurrToken; // last token read
-	char CurrTokenIdtf[C4MaxName]; // current token string
+	std::string CurrTokenIdtf; // current token string
 	int32_t CurrTokenVal; // current token value
-	char Filename[C4MaxName]; // filename
+	std::string Filename; // filename
 
 	bool AdvanceSpaces(); // advance to next token char; return whether EOF is reached
 	bool GetNextToken(); // get token, store in fields and advance to next; return whether not EOF
 	void ParseTo(C4MCNode *pToNode); // parse stuff into
-	void ParseValue(C4MCNode *pToNode, const char *szFieldName); // Set Field
+	void ParseValue(C4MCNode *pToNode, std::string_view fieldName); // Set Field
 
 public:
 	C4MCParser(C4MapCreatorS2 *pMapCreator, C4Random &random);
@@ -425,7 +484,10 @@ public:
 
 	void Clear(); // clear stuff
 
+#ifdef C4ENGINE
 	void ParseFile(const char *szFilename, C4Group *pGrp); // load and parse file
+#endif
+
 	void Parse(const char *szScript); // load and parse from mem
 
 	friend class C4MCParserErr;

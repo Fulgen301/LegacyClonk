@@ -190,8 +190,6 @@ const int32_t C4S_NoGoal      = 0,
 
 // Maximum map player extend factor
 
-const int32_t C4S_MaxMapPlayerExtend = 4;
-
 class C4SPlrStart
 {
 public:

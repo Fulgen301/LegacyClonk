@@ -307,3 +307,6 @@ enum C4AllowPictureStack
 	APS_Name     = 1 << 2,
 	APS_Overlay  = 1 << 3,
 };
+
+inline constexpr std::int32_t C4S_MaxMapPlayerExtend{4};
+inline constexpr std::int32_t MNone{-1};
